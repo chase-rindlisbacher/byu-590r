@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Load environment variables if .env file exists
+if [ -f "$(dirname "$0")/.env" ]; then
+    source "$(dirname "$0")/.env"
+fi
+
 # Fix GitHub Actions IAM permissions for ECR access
 # This script adds the necessary ECR permissions to the github-actions-deploy user
 
@@ -73,7 +78,7 @@ create_ecr_policy() {
                 "ecr:UploadLayerPart",
                 "ecr:CompleteLayerUpload"
             ],
-            "Resource": "arn:aws:ecr:us-west-1:${ACCOUNT_ID}:repository/byu-590r-*"
+            "Resource": "arn:aws:ecr:${AWS_REGION:-us-west-1}:${ACCOUNT_ID}:repository/${PROJECT_NAME:-byu-590r}-*"
         },
         {
             "Effect": "Allow",
@@ -81,7 +86,7 @@ create_ecr_policy() {
                 "ecr:CreateRepository",
                 "ecr:DescribeRepositories"
             ],
-            "Resource": "arn:aws:ecr:us-west-1:${ACCOUNT_ID}:repository/byu-590r-*"
+            "Resource": "arn:aws:ecr:${AWS_REGION:-us-west-1}:${ACCOUNT_ID}:repository/${PROJECT_NAME:-byu-590r}-*"
         }
     ]
 }
@@ -135,14 +140,14 @@ create_ecr_repositories() {
     
     # Create backend repository
     aws ecr create-repository \
-        --repository-name byu-590r-backend \
+        --repository-name ${PROJECT_NAME:-byu-590r}-backend \
         --region "$AWS_REGION" \
         --image-scanning-configuration scanOnPush=true \
         2>/dev/null || log_info "Backend repository already exists"
     
     # Create frontend repository
     aws ecr create-repository \
-        --repository-name byu-590r-frontend \
+        --repository-name ${PROJECT_NAME:-byu-590r}-frontend \
         --region "$AWS_REGION" \
         --image-scanning-configuration scanOnPush=true \
         2>/dev/null || log_info "Frontend repository already exists"

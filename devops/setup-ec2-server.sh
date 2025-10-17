@@ -6,6 +6,11 @@
 
 set -e
 
+# Load environment variables if .env file exists
+if [ -f "$(dirname "$0")/.env" ]; then
+    source "$(dirname "$0")/.env"
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -30,11 +35,11 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Configuration
-AWS_REGION="us-west-1"
-KEY_NAME="byu-590r"
-SECURITY_GROUP="sg-07cb07cc76067db76"
-PROJECT_NAME="byu-590r"
+# Configuration (can be overridden by .env file)
+AWS_REGION="${AWS_REGION:-us-west-1}"
+KEY_NAME="${KEY_NAME:-byu-590r}"
+SECURITY_GROUP="${SECURITY_GROUP_ID:-sg-07cb07cc76067db76}"
+PROJECT_NAME="${PROJECT_NAME:-byu-590r}"
 
 log_info "Starting EC2 server setup (applications will be deployed via GitHub Actions)..."
 
@@ -251,7 +256,7 @@ main() {
     log_info "📋 Next Steps - Add GitHub Secrets:"
     echo ""
     echo "  1. Go to your GitHub repository settings:"
-    echo "     https://github.com/BYU-IS-590R-Christiansen/byu-590r-monorepo/settings/secrets/actions"
+    echo "     ${GITHUB_REPO_URL:-https://github.com/BYU-IS-590R-Christiansen/byu-590r-monorepo/settings/secrets/actions}"
     echo ""
     echo "  2. Click 'New repository secret' and add these two secrets:"
     echo ""

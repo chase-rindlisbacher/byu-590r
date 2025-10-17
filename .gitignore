@@ -28,6 +28,8 @@ logs/
 *.tmp
 *.temp
 
-# Environment files (if any)
+# Environment files
+.env
 .env.local
 .env.*.local
+devops/.env
