@@ -1,4 +1,4 @@
-.PHONY: start start-dev start-prod stop clean build-frontend build-backend setup-backend migrate
+.PHONY: start start-dev start-prod stop clean build-frontend build-backend setup-backend migrate aws-deploy aws-status aws-logs aws-cleanup aws-manifests
 
 # Start all services
 start:
@@ -162,6 +162,26 @@ logs:
 	docker compose -f backend/docker-compose.yml logs -f
 	docker logs -f byu-590r-frontend
 
+# Build production images
+build-images:
+	@echo "Building Docker images..."
+	@echo "Backend image:"
+	cd backend && docker build -t byu-590r-backend .
+	@echo "Frontend image:"
+	cd web-app && docker build -t byu-590r-frontend .
+	@echo "Images built successfully!"
+
+# AWS deployment commands
+aws-setup:
+	@echo "Setting up AWS environment (EC2 + K3s + MySQL)..."
+	cd devops && ./setup.sh
+	@echo "AWS setup complete!"
+
+aws-teardown:
+	@echo "Tearing down AWS environment..."
+	cd devops && ./teardown.sh
+	@echo "AWS teardown complete!"
+
 # Help
 help:
 	@echo "Available commands:"
@@ -174,6 +194,9 @@ help:
 	@echo "  build-backend  - Build Laravel backend only"
 	@echo "  setup-backend - Setup Laravel backend (.env, key generation)"
 	@echo "  migrate      - Run database migrations"
+	@echo "  build-images - Build Docker images for backend and frontend"
+	@echo "  aws-setup    - Set up AWS environment (EC2 + K3s + MySQL)"
+	@echo "  aws-teardown - Tear down AWS environment"
 	@echo "  dev          - Start development environment (legacy)"
 	@echo "  logs         - Show all service logs"
 	@echo "  help         - Show this help message"

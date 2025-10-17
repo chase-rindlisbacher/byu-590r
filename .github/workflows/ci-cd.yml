@@ -1,0 +1,185 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: web-app/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd web-app
+          npm ci
+
+      - name: Run Angular tests
+        run: |
+          cd web-app
+          npm run test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Build Angular app
+        run: |
+          cd web-app
+          npm run build
+
+  test-backend:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: byu_590r_app_test
+          MYSQL_USER: byu_user
+          MYSQL_PASSWORD: byu_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, dom, fileinfo, mysql
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: |
+          cd backend
+          composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Setup Laravel environment
+        run: |
+          cd backend
+          cp .env.example .env
+          php artisan key:generate
+          sed -i 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_DATABASE=byu_590r_app/DB_DATABASE=byu_590r_app_test/' .env
+
+      - name: Run Laravel tests
+        run: |
+          cd backend
+          php artisan test
+
+  build-and-push-ecr:
+    needs: [test-frontend, test-backend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: byu-590r-backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./backend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Build, tag, and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: byu-590r-frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./web-app
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./web-app
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+  deploy-aws-eks:
+    needs: [build-and-push-ecr]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Install jsonnet
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jsonnet
+
+      - name: Deploy to AWS EKS
+        run: |
+          cd devops/scripts
+          ./aws-deploy.sh deploy
+        env:
+          EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Wait for deployment
+        run: |
+          kubectl wait --for=condition=available --timeout=600s deployment/backend -n byu-590r
+          kubectl wait --for=condition=available --timeout=600s deployment/frontend -n byu-590r
+
+  deploy-complete:
+    needs: [deploy-aws-eks]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Get ALB URLs
+        id: get-urls
+        run: |
+          kubectl get ingress -n byu-590r -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}' > alb-hostname.txt
+          echo "alb-hostname=$(cat alb-hostname.txt)" >> $GITHUB_OUTPUT
+
+      - name: Comment deployment URLs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const albHostname = '${{ steps.get-urls.outputs.alb-hostname }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 **AWS EKS Deployment Successful!**\n\n✅ **Frontend**: Deployed to AWS EKS\n🔗 **Frontend URL**: https://byu-590r.com\n\n✅ **Backend**: Deployed to AWS EKS\n🔗 **Backend API**: https://api.byu-590r.com\n\n🌐 **ALB Hostname**: ${albHostname}\n\n🎉 Your BYU 590R Monorepo is now running on AWS EKS with RDS and Secrets Manager!`
+            })

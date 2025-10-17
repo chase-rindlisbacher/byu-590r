@@ -1,15 +1,18 @@
 # BYU 590R Monorepo
 
-A clean slate monorepo project with Laravel backend, Angular frontend, and MySQL database.
+A student-friendly monorepo project with Laravel backend, Angular frontend, and AWS deployment.
 
 ## Features
 
-- **Laravel Backend**: RESTful API with MySQL database
+- **Laravel Backend**: RESTful API with local MySQL
 - **Angular Frontend**: Modern web application with TypeScript
-- **MySQL Database**: Relational database for data persistence
-- **Docker Infrastructure**: Easy development and deployment
+- **AWS Infrastructure**: K3s on EC2, local MySQL
+- **Static IP Access**: Elastic IP for consistent access
+- **Cost Optimized**: ~$0-2/month with free tier usage
 
 ## Quick Start
+
+### Local Development
 
 1. **Start all services**:
 
@@ -18,26 +21,65 @@ A clean slate monorepo project with Laravel backend, Angular frontend, and MySQL
    ```
 
 2. **Access the application**:
-   - Frontend: http://localhost:4200 (development) or http://localhost:3000 (production)
+   - Frontend: http://localhost:4200 (development)
    - Backend API: http://localhost:8000
    - Database: localhost:3306
 
+### AWS Deployment
+
+1. **Quick setup with automated script**:
+
+   ```bash
+   make aws-setup
+   ```
+
+   This script will:
+
+   - Ask for your AWS credentials and configuration
+   - Create EC2 instance with MySQL and K3s
+   - Build and deploy your application
+   - Provide you with access URLs
+
+2. **Manual setup** (if you prefer step-by-step):
+
+   ```bash
+   # See ULTRA_CHEAP_SETUP.md for detailed instructions
+   ```
+
+3. **Access your application**:
+
+   - Frontend: `http://YOUR_ELASTIC_IP:30080`
+   - Backend API: `http://YOUR_ELASTIC_IP:30081/api`
+
+4. **Clean up when done**:
+   ```bash
+   make aws-teardown
+   ```
+
 ## Available Commands
 
-- `make start` - Start all services (auto-detects environment)
-- `make start-dev` - Start with hot reloading (development mode)
-- `make start-prod` - Start with static build (production mode)
-- `make stop` - Stop all services
-- `make clean` - Stop and clean up everything
+### Local Development
+
+- `make start` - Start local development environment
+- `make build-images` - Build Docker images for deployment
 - `make help` - Show all available commands
+
+### AWS Deployment
+
+- `make aws-setup` - Automated AWS setup (EC2 + K3s + MySQL)
+- `make aws-teardown` - Clean up all AWS resources
 
 ## Project Structure
 
 ```
 ├── backend/          # Laravel API
 ├── web-app/          # Angular frontend
-├── Makefile         # Development commands
-└── README.md        # This file
+├── devops/           # AWS deployment configurations
+│   ├── jsonnet/      # Kubernetes manifests
+│   ├── setup.sh      # Automated AWS setup script
+│   └── teardown.sh   # AWS cleanup script
+├── ULTRA_CHEAP_SETUP.md # Manual setup guide
+└── Makefile         # Development commands
 ```
 
 ## API Endpoints
@@ -45,8 +87,20 @@ A clean slate monorepo project with Laravel backend, Angular frontend, and MySQL
 - `GET /api/hello` - Hello World endpoint
 - `GET /api/health` - Health check endpoint
 
-## Development
+## Documentation
 
-The project uses Docker for containerized development. The Makefile provides convenient commands for common development tasks.
+- **[ULTRA_CHEAP_SETUP.md](ULTRA_CHEAP_SETUP.md)** - Complete ultra-cheap setup guide (~$0-2/month)
+- **[COST_OPTIONS.md](COST_OPTIONS.md)** - Compare different Kubernetes deployment options
 
-For more detailed information, run `make help` to see all available commands.
+## Learning Objectives
+
+This project teaches:
+
+- Kubernetes deployments (K3s on EC2)
+- Database management (MySQL installation and configuration)
+- AWS managed services (EC2, ECR)
+- Infrastructure as Code with Jsonnet
+- CI/CD with GitHub Actions
+- Container orchestration and scaling
+
+Perfect for learning modern DevOps practices at minimal cost!
