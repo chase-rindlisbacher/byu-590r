@@ -240,10 +240,10 @@ sudo tee /etc/apache2/sites-available/byu-590r.conf > /dev/null << 'APACHE_MAIN_
         RewriteRule ^(.*)$ index.php [QSA,L]
     </Directory>
     
-    # App routing - Angular frontend
-    Alias /app /var/www/html/app
+    # App routing - Angular frontend (point to browser folder)
+    Alias /app /var/www/html/app/browser
     
-    <Directory /var/www/html/app>
+    <Directory /var/www/html/app/browser>
         AllowOverride All
         Require all granted
         
