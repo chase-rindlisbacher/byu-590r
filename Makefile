@@ -1,4 +1,4 @@
-.PHONY: start start-dev start-prod stop clean build-frontend build-backend setup-backend migrate aws-deploy aws-status aws-logs aws-cleanup aws-manifests
+.PHONY: start start-dev start-prod stop clean build-frontend build-backend setup-backend migrate aws-deploy aws-status aws-logs aws-cleanup aws-manifests setup_infrastructure
 
 # Start all services
 start:
@@ -177,6 +177,9 @@ aws-setup:
 	cd devops && ./setup-ec2-server.sh
 	@echo "AWS server setup complete! Configure GitHub Actions secrets and push to deploy."
 
+setup_infrastructure: aws-setup
+	@echo "Infrastructure setup complete!"
+
 aws-teardown:
 	@echo "Tearing down AWS environment..."
 	cd devops && ./teardown.sh
@@ -248,6 +251,7 @@ help:
 	@echo "  setup-backend - Setup Laravel backend (.env, key generation)"
 	@echo "  migrate      - Run database migrations"
 	@echo "  build-images - Build Docker images for backend and frontend"
+	@echo "  setup_infrastructure - Set up AWS EC2 server infrastructure"
 	@echo "  aws-setup    - Set up AWS EC2 server (GitHub Actions deploys apps)"
 	@echo "  aws-teardown - Tear down AWS environment"
 	@echo "  aws-list-instances - List all BYU 590R EC2 instances"
