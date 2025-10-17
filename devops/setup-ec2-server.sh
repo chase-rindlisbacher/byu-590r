@@ -153,6 +153,10 @@ create_ec2_instance() {
     echo "ELASTIC_IP=$ELASTIC_IP" >> .server-config
     echo "ALLOCATION_ID=$ALLOCATION_ID" >> .server-config
     
+    # Use Elastic IP as the primary host (more stable than dynamic IP)
+    EC2_HOST="$ELASTIC_IP"
+    echo "EC2_HOST=$EC2_HOST" >> .server-config
+    
     log_success "EC2 instance created: $INSTANCE_ID with Elastic IP: $ELASTIC_IP"
 }
 
@@ -302,9 +306,16 @@ main() {
     echo ""
     log_success "🎉 Server setup complete!"
     echo ""
+    
+    # Load configuration from .server-config
+    if [ -f ".server-config" ]; then
+        source .server-config
+    fi
+    
     log_info "Server Details:"
     echo "  Instance ID: $INSTANCE_ID"
-    echo "  Public IP: $INSTANCE_IP"
+    echo "  Elastic IP: $ELASTIC_IP"
+    echo "  EC2 Host: $EC2_HOST"
     echo ""
     log_info "📋 Next Steps - Add GitHub Secrets:"
     echo ""
@@ -314,7 +325,7 @@ main() {
     echo "  2. Click 'New repository secret' and add these two secrets:"
     echo ""
     echo "     Secret Name: EC2_HOST"
-    echo "     Secret Value: $ELASTIC_IP"
+    echo "     Secret Value: $EC2_HOST"
     echo ""
     echo "     Secret Name: EC2_SSH_PRIVATE_KEY"
     echo "     Secret Value: (Copy the contents of ~/.ssh/$KEY_NAME.pem)"
