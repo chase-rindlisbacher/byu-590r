@@ -202,8 +202,7 @@ jobs:
             # Run database migrations
             php artisan migrate --force
             
-            # Configure Laravel for production
-            php artisan config:cache
+            # Configure Laravel for production (skip config cache to avoid APP_KEY issues)
             php artisan route:cache
             php artisan view:cache
             
@@ -259,27 +258,6 @@ jobs:
             curl -f http://localhost:4444/api/hello || echo "API endpoint not responding"
             echo "=== Frontend Test ==="
             curl -f http://localhost:8888/ || echo "Frontend not responding"
-          EOF
-
-      - name: Generate Laravel application key
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /var/www/html/api
-            sudo chown -R ubuntu:ubuntu .
-            sudo chmod -R 775 storage bootstrap/cache
-            # Generate application key (ensure clean generation)
-            php artisan key:generate --show > /tmp/app_key
-            sed -i "s/APP_KEY=.*/APP_KEY=$(cat /tmp/app_key)/" .env
-            rm /tmp/app_key
-            
-            # Clear config cache to ensure new key is loaded
-            rm -f bootstrap/cache/config.php
-            php artisan config:clear
-            
-            sudo chown -R www-data:www-data .
-            sudo chmod -R 755 .
-            sudo chmod -R 775 storage bootstrap/cache
-            echo "Laravel application key generated successfully"
           EOF
 
   deploy-complete:
