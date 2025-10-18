@@ -362,9 +362,14 @@ fi
 
 # Create .env file if it doesn't exist
 if [ ! -f /var/www/html/api/.env ]; then
-    sudo cp /var/www/html/api/.env.example /var/www/html/api/.env
-    sudo chown www-data:www-data /var/www/html/api/.env
-    sudo chmod 644 /var/www/html/api/.env
+    if [ -f /var/www/html/api/.env.example ]; then
+        sudo cp /var/www/html/api/.env.example /var/www/html/api/.env
+        sudo chown www-data:www-data /var/www/html/api/.env
+        sudo chmod 644 /var/www/html/api/.env
+        echo "[SUCCESS] Created .env file from .env.example"
+    else
+        echo "[INFO] .env.example not found - .env will be created during deployment"
+    fi
 fi
 
 echo "Server setup complete! Ready for GitHub Actions deployment."
