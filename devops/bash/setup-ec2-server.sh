@@ -38,8 +38,12 @@ log_error() {
 # Configuration (can be overridden by .env file)
 AWS_REGION="${AWS_REGION:-us-west-1}"
 KEY_NAME="${KEY_NAME:-byu-590r}"
-SECURITY_GROUP="${SECURITY_GROUP_ID:-sg-07cb07cc76067db76}"
 PROJECT_NAME="${PROJECT_NAME:-byu-590r}"
+SECURITY_GROUP=""  # Will be set by create_or_get_security_group function
+
+# Clear any old security group variables from environment
+unset SECURITY_GROUP_ID
+unset SECURITY_GROUP
 
 log_info "Starting EC2 server setup (applications will be deployed via GitHub Actions)..."
 
@@ -62,6 +66,124 @@ check_prerequisites() {
     log_success "Prerequisites check passed"
 }
 
+# Create or get security group
+create_or_get_security_group() {
+    log_info "Setting up security group..."
+    
+    # Ensure we start with a clean security group variable
+    SECURITY_GROUP=""
+    
+    # Check if security group already exists
+    EXISTING_SG=$(aws ec2 describe-security-groups \
+        --region "$AWS_REGION" \
+        --filters "Name=tag:Project,Values=590r" "Name=tag:Name,Values=byu-590r-sg" \
+        --query 'SecurityGroups[0].GroupId' \
+        --output text 2>/dev/null)
+    
+    log_info "Existing security group check result: '$EXISTING_SG'"
+    
+    if [ "$EXISTING_SG" != "None" ] && [ "$EXISTING_SG" != "" ]; then
+        log_info "Found existing security group: $EXISTING_SG"
+        SECURITY_GROUP="$EXISTING_SG"
+        export SECURITY_GROUP
+    else
+        log_info "Creating new security group..."
+        
+        # Get default VPC ID
+        VPC_ID=$(aws ec2 describe-vpcs \
+            --region "$AWS_REGION" \
+            --filters "Name=is-default,Values=true" \
+            --query 'Vpcs[0].VpcId' \
+            --output text)
+        
+        log_info "Default VPC ID: $VPC_ID"
+        
+        if [ "$VPC_ID" = "None" ] || [ "$VPC_ID" = "" ]; then
+            log_error "No default VPC found in region $AWS_REGION"
+            exit 1
+        fi
+        
+        # Create security group
+        log_info "Creating security group with name 'byu-590r-sg' in VPC $VPC_ID..."
+        SECURITY_GROUP=$(aws ec2 create-security-group \
+            --region "$AWS_REGION" \
+            --group-name "byu-590r-sg" \
+            --description "Security group for BYU 590R application" \
+            --vpc-id "$VPC_ID" \
+            --tag-specifications 'ResourceType=security-group,Tags=[{Key=Name,Value=byu-590r-sg},{Key=Project,Value=590r}]' \
+            --query 'GroupId' \
+            --output text)
+        
+        log_info "Security group creation result: '$SECURITY_GROUP'"
+        
+        if [ "$SECURITY_GROUP" = "" ]; then
+            log_error "Failed to create security group"
+            exit 1
+        fi
+        
+        log_success "Created security group: $SECURITY_GROUP"
+        export SECURITY_GROUP
+        
+        # Add security group rules
+        log_info "Adding security group rules..."
+        
+        # SSH access
+        log_info "Adding SSH rule (port 22)..."
+        aws ec2 authorize-security-group-ingress \
+            --region "$AWS_REGION" \
+            --group-id "$SECURITY_GROUP" \
+            --protocol tcp \
+            --port 22 \
+            --cidr 0.0.0.0/0 >/dev/null
+        
+        # HTTP access
+        log_info "Adding HTTP rule (port 80)..."
+        aws ec2 authorize-security-group-ingress \
+            --region "$AWS_REGION" \
+            --group-id "$SECURITY_GROUP" \
+            --protocol tcp \
+            --port 80 \
+            --cidr 0.0.0.0/0 >/dev/null
+        
+        # HTTPS access
+        log_info "Adding HTTPS rule (port 443)..."
+        aws ec2 authorize-security-group-ingress \
+            --region "$AWS_REGION" \
+            --group-id "$SECURITY_GROUP" \
+            --protocol tcp \
+            --port 443 \
+            --cidr 0.0.0.0/0 >/dev/null
+        
+        # Backend API access
+        log_info "Adding Backend API rule (port 4444)..."
+        aws ec2 authorize-security-group-ingress \
+            --region "$AWS_REGION" \
+            --group-id "$SECURITY_GROUP" \
+            --protocol tcp \
+            --port 4444 \
+            --cidr 0.0.0.0/0 >/dev/null
+        
+        log_success "Security group rules added"
+    fi
+    
+    log_success "Security group ready: $SECURITY_GROUP"
+    
+    # Final verification that the security group exists
+    log_info "Verifying security group exists..."
+    VERIFY_SG=$(aws ec2 describe-security-groups \
+        --region "$AWS_REGION" \
+        --group-ids "$SECURITY_GROUP" \
+        --query 'SecurityGroups[0].GroupId' \
+        --output text 2>/dev/null)
+    
+    if [ "$VERIFY_SG" = "$SECURITY_GROUP" ]; then
+        log_success "Security group verification passed: $SECURITY_GROUP"
+    else
+        log_error "Security group verification failed! Expected: $SECURITY_GROUP, Got: $VERIFY_SG"
+        exit 1
+    fi
+}
+
 # Cleanup existing resources using teardown script
 cleanup_existing_resources() {
     log_info "Cleaning up any existing resources..."
@@ -82,6 +204,13 @@ cleanup_existing_resources() {
 # Create EC2 instance
 create_ec2_instance() {
     log_info "Creating EC2 instance..."
+    log_info "Using security group: $SECURITY_GROUP"
+    
+    # Verify security group is set
+    if [ -z "$SECURITY_GROUP" ]; then
+        log_error "Security group not set! This should not happen."
+        exit 1
+    fi
     
     # Get account ID
     ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -395,9 +524,12 @@ EOF
 # Main setup function
 main() {
     log_info "Starting BYU 590R Server Setup..."
+    log_info "Initial SECURITY_GROUP value: '$SECURITY_GROUP'"
     
     check_prerequisites
     cleanup_existing_resources
+    create_or_get_security_group
+    log_info "SECURITY_GROUP after create_or_get_security_group: '$SECURITY_GROUP'"
     create_ec2_instance
     create_s3_bucket
     setup_ec2_dependencies

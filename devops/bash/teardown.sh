@@ -239,6 +239,41 @@ terminate_instances() {
     fi
 }
 
+# Delete security groups with 590r tag
+delete_security_groups() {
+    log_info "Finding security groups with 590r tag to delete..."
+    
+    # Get all security groups with Project=590r tag
+    SECURITY_GROUPS=$(aws ec2 describe-security-groups \
+        --filters "Name=tag:Project,Values=590r" \
+        --query 'SecurityGroups[*].[GroupId,GroupName]' \
+        --output text)
+    
+    if [ -n "$SECURITY_GROUPS" ]; then
+        log_info "Found security groups with 590r tag to delete:"
+        echo "$SECURITY_GROUPS" | while read group_id group_name; do
+            echo "  Security Group: $group_id ($group_name)"
+        done
+        
+        # Extract security group IDs
+        SG_IDS=$(echo "$SECURITY_GROUPS" | awk '{print $1}' | tr '\n' ' ')
+        
+        log_info "Deleting security groups..."
+        for sg_id in $SG_IDS; do
+            # Try to delete the security group
+            if aws ec2 delete-security-group --group-id "$sg_id" 2>/dev/null; then
+                log_success "Deleted security group: $sg_id"
+            else
+                log_warning "Could not delete security group $sg_id (may be in use or have dependencies)"
+            fi
+        done
+        
+        log_success "Security group cleanup completed"
+    else
+        log_info "No security groups with 590r tag found to delete"
+    fi
+}
+
 # Release Elastic IP
 release_elastic_ip() {
     if [ -n "$ALLOCATION_ID" ]; then
@@ -372,6 +407,7 @@ main() {
     
     stop_instances
     terminate_instances
+    delete_security_groups
     release_elastic_ip
     delete_s3_buckets
     cleanup_ecr

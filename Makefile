@@ -225,7 +225,7 @@ build-frontend-prod:
 	cd web-app && npm run build:prod
 	@echo "Frontend build complete!"
 
-# AWS deployment commands (Bash)
+# AWS deployment commands (Bash only)
 aws-setup:
 	@echo "Setting up AWS EC2 server (GitHub Actions will handle deployment)..."
 	cd devops/bash && ./setup-ec2-server.sh
@@ -234,20 +234,6 @@ aws-setup:
 aws-teardown:
 	@echo "Tearing down AWS environment..."
 	cd devops/bash && ./teardown.sh
-	@echo "AWS teardown complete!"
-
-# AWS deployment commands (Terraform)
-aws-setup-tf:
-	@echo "Setting up AWS EC2 server using Terraform (GitHub Actions will handle deployment)..."
-	cd devops/terraform && terraform init
-	cd devops/terraform && terraform plan -out=tfplan
-	cd devops/terraform && terraform apply tfplan
-	@echo "AWS server setup complete! Configure GitHub Actions secrets and push to deploy."
-
-aws-teardown-tf:
-	@echo "Tearing down AWS environment using Terraform..."
-	cd devops/terraform && terraform init
-	cd devops/terraform && terraform destroy -auto-approve
 	@echo "AWS teardown complete!"
 
 # AWS cleanup commands for orphaned resources
@@ -323,8 +309,6 @@ help:
 	@echo "  setup_infrastructure - Set up AWS EC2 server infrastructure"
 	@echo "  aws-setup    - Set up AWS EC2 server using Bash scripts (GitHub Actions deploys apps)"
 	@echo "  aws-teardown - Tear down AWS environment using Bash scripts"
-	@echo "  aws-setup-tf - Set up AWS EC2 server using Terraform (GitHub Actions deploys apps)"
-	@echo "  aws-teardown-tf - Tear down AWS environment using Terraform"
 	@echo "  aws-list-instances - List all BYU 590R EC2 instances"
 	@echo "  aws-cleanup-orphaned - Show orphaned instances (older than 24h)"
 	@echo "  aws-terminate-orphaned - Terminate orphaned instances"
