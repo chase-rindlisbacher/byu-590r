@@ -220,7 +220,12 @@ jobs:
             
             # Use make commands for deployment
             make setup-backend-ec2
-            composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --no-dev --optimize-autoloader
+            # Use update if lock file doesn't exist, otherwise use install
+            if [ -f composer.lock ]; then
+              composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --no-dev --optimize-autoloader
+            else
+              composer update -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --no-dev --optimize-autoloader
+            fi
             
             # Generate application key (ensure clean generation)
             php artisan key:generate --show > /tmp/app_key
