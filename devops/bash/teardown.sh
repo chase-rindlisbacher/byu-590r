@@ -5,6 +5,9 @@
 
 set -e
 
+# Disable pager for AWS CLI to prevent requiring 'q' to continue
+export AWS_PAGER=""
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,12 +35,24 @@ log_error() {
 # Check if config file exists or find project resources
 check_config() {
     if [ -f "../.server-config" ]; then
-        # Load configuration from file
-        source ../.server-config
+        # Load configuration from file, filtering out any log output or color codes
+        # Only source lines that look like valid variable assignments
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Skip empty lines, comments, and lines that don't look like variable assignments
+            if [[ -n "$line" ]] && [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ "$line" =~ ^[A-Z_][A-Z0-9_]*= ]]; then
+                # Remove any ANSI color codes before evaluating
+                clean_line=$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g' | sed 's/\033\[[0-9;]*m//g')
+                eval "$clean_line" 2>/dev/null || true
+            fi
+        done < ../.server-config
         
         log_info "Loaded configuration from .server-config:"
-        echo "  Instance ID: $INSTANCE_ID"
-        echo "  Instance IP: $INSTANCE_IP"
+        if [ -n "$INSTANCE_ID" ]; then
+            echo "  Instance ID: $INSTANCE_ID"
+        fi
+        if [ -n "$INSTANCE_IP" ]; then
+            echo "  Instance IP: $INSTANCE_IP"
+        fi
         if [ -n "$ALLOCATION_ID" ]; then
             echo "  Allocation ID: $ALLOCATION_ID"
         fi
@@ -46,6 +61,12 @@ check_config() {
         fi
         if [ -n "$S3_BUCKET" ]; then
             echo "  S3 Bucket: $S3_BUCKET"
+        fi
+        if [ -n "$S3_BUCKET_DEV" ]; then
+            echo "  S3 Bucket (DEV): $S3_BUCKET_DEV"
+        fi
+        if [ -n "$S3_BUCKET_PROD" ]; then
+            echo "  S3 Bucket (PROD): $S3_BUCKET_PROD"
         fi
     else
         log_warning "Configuration file ../.server-config not found"
@@ -98,7 +119,7 @@ check_config() {
                 fi
         
         # Find project Elastic IPs
-        EXISTING_EIPS=$(aws ec2 describe-addresses --filters "Name=tag:Name,Values=byu-590r" --query 'Addresses[*].[AllocationId,PublicIp]' --output text)
+        EXISTING_EIPS=$(aws ec2 describe-addresses --filters "Name=tag:Project,Values=590r" --query 'Addresses[*].[AllocationId,PublicIp]' --output text)
         
         if [ -n "$EXISTING_EIPS" ]; then
             log_warning "Found existing BYU 590R Elastic IPs:"
@@ -133,8 +154,13 @@ confirm_teardown() {
         done
     fi
     
-    if [ -n "$ALLOCATION_ID" ]; then
-        echo "  - Elastic IP: $ELASTIC_IP"
+    # Show Elastic IPs that will be released
+    ELASTIC_IPS=$(aws ec2 describe-addresses --filters "Name=tag:Project,Values=590r" --query 'Addresses[*].[AllocationId,PublicIp]' --output text)
+    if [ -n "$ELASTIC_IPS" ]; then
+        echo "  - Elastic IPs:"
+        echo "$ELASTIC_IPS" | while read allocation_id public_ip; do
+            echo "    * $public_ip (Allocation: $allocation_id)"
+        done
     fi
     # Show S3 buckets that will be deleted
     ALL_BUCKETS=$(aws s3api list-buckets --query 'Buckets[].Name' --output text)
@@ -218,7 +244,7 @@ terminate_instances() {
         
         # Disassociate all Elastic IPs first
         log_info "Disassociating all Elastic IPs..."
-        aws ec2 describe-addresses --filters "Name=tag:Name,Values=byu-590r" --query 'Addresses[*].[AllocationId,AssociationId]' --output text | while read allocation_id association_id; do
+        aws ec2 describe-addresses --filters "Name=tag:Project,Values=590r" --query 'Addresses[*].[AllocationId,AssociationId]' --output text | while read allocation_id association_id; do
             if [ -n "$association_id" ] && [ "$association_id" != "None" ]; then
                 aws ec2 disassociate-address --association-id "$association_id" 2>/dev/null || true
                 log_info "Disassociated Elastic IP: $allocation_id"
@@ -274,21 +300,45 @@ delete_security_groups() {
     fi
 }
 
-# Release Elastic IP
+# Release all Elastic IPs tagged with Project=590r
 release_elastic_ip() {
-    if [ -n "$ALLOCATION_ID" ]; then
-        log_info "Releasing Elastic IP..."
+    log_info "Finding all BYU 590R Elastic IPs to release..."
+    
+    # Find all Elastic IPs tagged with Project=590r
+    ELASTIC_IPS=$(aws ec2 describe-addresses \
+        --filters "Name=tag:Project,Values=590r" \
+        --query 'Addresses[*].[AllocationId,PublicIp,AssociationId]' \
+        --output text)
+    
+    if [ -n "$ELASTIC_IPS" ]; then
+        log_info "Found BYU 590R Elastic IPs to release:"
+        echo "$ELASTIC_IPS" | while read allocation_id public_ip association_id; do
+            echo "  Elastic IP: $public_ip (Allocation: $allocation_id)"
+            
+            # Disassociate if still associated
+            if [ -n "$association_id" ] && [ "$association_id" != "None" ]; then
+                log_info "Disassociating Elastic IP: $allocation_id"
+                aws ec2 disassociate-address --association-id "$association_id" 2>/dev/null || true
+            fi
+            
+            # Release the Elastic IP
+            log_info "Releasing Elastic IP: $allocation_id"
+            if aws ec2 release-address --allocation-id "$allocation_id" 2>/dev/null; then
+                log_success "Released Elastic IP: $allocation_id ($public_ip)"
+            else
+                log_warning "Could not release Elastic IP: $allocation_id (may already be released)"
+            fi
+        done
         
-        aws ec2 release-address --allocation-id "$ALLOCATION_ID" 2>/dev/null || true
-        log_success "Elastic IP released"
+        log_success "All Elastic IP cleanup completed"
     else
-        log_info "No Elastic IP allocation ID found"
+        log_info "No BYU 590R Elastic IPs found to release"
     fi
 }
 
-# Delete all S3 buckets
+# Delete all S3 buckets (both dev and prod)
 delete_s3_buckets() {
-    log_info "Finding all BYU 590R S3 buckets..."
+    log_info "Finding all BYU 590R S3 buckets (dev and prod)..."
     
     # Get all buckets and check their tags
     ALL_BUCKETS=$(aws s3api list-buckets --query 'Buckets[].Name' --output text)
@@ -303,7 +353,7 @@ delete_s3_buckets() {
     done
     
     if [ -n "$BYU_BUCKETS" ]; then
-        log_info "Found BYU 590R S3 buckets to delete:"
+        log_info "Found BYU 590R S3 buckets to delete (both dev and prod):"
         for bucket in $BYU_BUCKETS; do
             echo "  Bucket: $bucket"
         done

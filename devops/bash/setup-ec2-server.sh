@@ -6,6 +6,9 @@
 
 set -e
 
+# Disable pager for AWS CLI to prevent requiring 'q' to continue
+export AWS_PAGER=""
+
 # Load environment variables if .env file exists
 if [ -f "$(dirname "$0")/../.env" ]; then
     source "$(dirname "$0")/../.env"
@@ -40,12 +43,14 @@ AWS_REGION="${AWS_REGION:-us-west-1}"
 KEY_NAME="${KEY_NAME:-byu-590r}"
 PROJECT_NAME="${PROJECT_NAME:-byu-590r}"
 SECURITY_GROUP=""  # Will be set by create_or_get_security_group function
+ENVIRONMENT="${ENVIRONMENT:-production}"  # Can be 'development', 'local', or 'production'
 
 # Clear any old security group variables from environment
 unset SECURITY_GROUP_ID
 unset SECURITY_GROUP
 
 log_info "Starting EC2 server setup (applications will be deployed via GitHub Actions)..."
+log_info "Environment: $ENVIRONMENT (set ENVIRONMENT=local or ENVIRONMENT=dev for dev bucket)"
 
 # Check prerequisites
 check_prerequisites() {
@@ -225,6 +230,8 @@ create_ec2_instance() {
         --query 'Instances[0].InstanceId' \
         --output text)
     
+    # Create clean config file (remove any existing one first to avoid color code contamination)
+    rm -f ../.server-config
     echo "INSTANCE_ID=$INSTANCE_ID" > ../.server-config
     
     log_info "Waiting for instance to be running..."
@@ -240,7 +247,7 @@ create_ec2_instance() {
     
     # Check for existing Elastic IP or create new one
     log_info "Checking for Elastic IP..."
-    EXISTING_EIP=$(aws ec2 describe-addresses --filters "Name=tag:Name,Values=$PROJECT_NAME" --query 'Addresses[0].AllocationId' --output text)
+    EXISTING_EIP=$(aws ec2 describe-addresses --filters "Name=tag:Project,Values=590r" "Name=tag:Name,Values=$PROJECT_NAME" --query 'Addresses[0].AllocationId' --output text)
     
     if [ "$EXISTING_EIP" != "None" ] && [ -n "$EXISTING_EIP" ]; then
         log_info "Using existing Elastic IP: $EXISTING_EIP"
@@ -249,7 +256,7 @@ create_ec2_instance() {
         log_info "Creating new Elastic IP..."
         ALLOCATION_ID=$(aws ec2 allocate-address \
             --domain vpc \
-            --tag-specifications "ResourceType=elastic-ip,Tags=[{Key=Name,Value=$PROJECT_NAME},{Key=Project,Value=$PROJECT_NAME}]" \
+            --tag-specifications "ResourceType=elastic-ip,Tags=[{Key=Name,Value=$PROJECT_NAME},{Key=Project,Value=590r}]" \
             --query 'AllocationId' \
             --output text)
         log_success "Created Elastic IP: $ALLOCATION_ID"
@@ -305,18 +312,17 @@ create_ec2_instance() {
     log_success "EC2 instance created: $INSTANCE_ID with Elastic IP: $ELASTIC_IP"
 }
 
-# Create S3 bucket
-create_s3_bucket() {
-    log_info "Creating S3 bucket..."
+# Create a single S3 bucket
+create_single_s3_bucket() {
+    local BUCKET_TYPE=$1
+    local BUCKET_NAME=$2
+    local ENV_TAG=$3
     
-    # Generate unique bucket name using project name and timestamp
-    BUCKET_NAME="${PROJECT_NAME}-$(date +%s)-$(openssl rand -hex 4)"
+    log_info "Creating ${BUCKET_TYPE} S3 bucket: $BUCKET_NAME"
     
-    log_info "Generated unique bucket name: $BUCKET_NAME"
-    
-    # Check if bucket already exists (shouldn't happen with unique names, but safety check)
+    # Check if bucket already exists
     if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
-        log_warning "S3 bucket '$BUCKET_NAME' already exists (unlikely with unique names)"
+        log_warning "S3 bucket '$BUCKET_NAME' already exists"
         log_info "Using existing bucket: $BUCKET_NAME"
     else
         log_info "Creating S3 bucket: $BUCKET_NAME"
@@ -336,15 +342,40 @@ create_s3_bucket() {
         # Tag the bucket for proper identification
         aws s3api put-bucket-tagging \
             --bucket "$BUCKET_NAME" \
-            --tagging 'TagSet=[{Key=Name,Value=byu-590r},{Key=Project,Value=byu-590r}]'
+            --tagging "TagSet=[{Key=Name,Value=byu-590r-${BUCKET_TYPE}},{Key=Project,Value=byu-590r},{Key=Environment,Value=${ENV_TAG}}]"
         
-        log_success "S3 bucket '$BUCKET_NAME' created successfully with tags"
+        log_success "S3 bucket '$BUCKET_NAME' created successfully with tags (Type: ${BUCKET_TYPE})"
     fi
     
-    echo "S3_BUCKET=$BUCKET_NAME" >> ../.server-config
+    echo "$BUCKET_NAME"
+}
+
+# Create S3 buckets (both dev and prod)
+create_s3_bucket() {
+    log_info "Creating S3 buckets for both dev and prod environments..."
     
-    # Upload book images to S3
-    upload_book_images_to_s3 "$BUCKET_NAME"
+    # Create dev bucket
+    DEV_BUCKET_NAME="${PROJECT_NAME}-dev-$(date +%s)"
+    DEV_BUCKET=$(create_single_s3_bucket "dev" "$DEV_BUCKET_NAME" "development")
+    
+    # Create prod bucket
+    PROD_BUCKET_NAME="${PROJECT_NAME}-prod-$(date +%s)-$(openssl rand -hex 4)"
+    PROD_BUCKET=$(create_single_s3_bucket "prod" "$PROD_BUCKET_NAME" "production")
+    
+    # Save bucket names to config file
+    echo "S3_BUCKET_DEV=$DEV_BUCKET" >> ../.server-config
+    echo "S3_BUCKET_PROD=$PROD_BUCKET" >> ../.server-config
+    echo "S3_BUCKET=$PROD_BUCKET" >> ../.server-config  # Default to prod for backward compatibility
+    
+    log_success "Both S3 buckets created successfully!"
+    log_info "  Dev Bucket: $DEV_BUCKET"
+    log_info "  Prod Bucket: $PROD_BUCKET"
+    
+    # Upload book images to both buckets
+    log_info "Uploading book images to dev bucket..."
+    upload_book_images_to_s3 "$DEV_BUCKET"
+    log_info "Uploading book images to prod bucket..."
+    upload_book_images_to_s3 "$PROD_BUCKET"
 }
 
 # Upload book images to S3
@@ -363,11 +394,17 @@ upload_book_images_to_s3() {
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
     BOOKS_DIR="$PROJECT_ROOT/backend/public/assets/books"
     
+    log_info "Looking for book images in: $BOOKS_DIR"
+    
     if [ ! -d "$BOOKS_DIR" ]; then
         log_warning "Book images directory not found: $BOOKS_DIR"
         log_info "Skipping book image upload - directory will be created during deployment"
         return
     fi
+    
+    # List files in directory for debugging
+    log_info "Found book images directory. Contents:"
+    ls -la "$BOOKS_DIR" | head -20 || log_warning "Could not list directory contents"
     
     # Files to upload (only the ones used in the seeder)
     FILES_TO_UPLOAD=(
@@ -391,11 +428,17 @@ upload_book_images_to_s3() {
         
         if [ -f "$local_path" ]; then
             log_info "Uploading $local_file to s3://$BUCKET_NAME/$s3_key"
-            if aws s3 cp "$local_path" "s3://$BUCKET_NAME/$s3_key" --acl public-read 2>/dev/null; then
+            # Upload without ACL since bucket has public access blocked
+            # The bucket policy can be configured separately if public access is needed
+            UPLOAD_OUTPUT=$(aws s3 cp "$local_path" "s3://$BUCKET_NAME/$s3_key" 2>&1)
+            UPLOAD_EXIT_CODE=$?
+            
+            if [ $UPLOAD_EXIT_CODE -eq 0 ]; then
                 ((UPLOADED_COUNT++))
                 log_success "Uploaded $local_file successfully"
             else
-                log_warning "Failed to upload $local_file"
+                log_error "Failed to upload $local_file"
+                log_error "Error: $UPLOAD_OUTPUT"
             fi
         else
             log_warning "File not found: $local_path"
@@ -604,23 +647,36 @@ main() {
     echo ""
     echo "╔══════════════════════════════════════════════════════════════════════════════╗"
     echo "║                                                                              ║"
-    echo "║                    🚀 PROD ENVIRONMENT SETUP COMPLETE 🚀                    ║"
+    echo "║                    🚀 INFRASTRUCTURE SETUP COMPLETE 🚀                    ║"
     echo "║                                                                              ║"
-    echo "║  Your BYU 590R production environment is now ready for deployment!         ║"
+    echo "║  Your BYU 590R infrastructure is now ready for deployment!                ║"
+    echo "║  Both DEV and PROD S3 buckets have been created.                            ║"
     echo "║                                                                              ║"
     echo "╚══════════════════════════════════════════════════════════════════════════════╝"
     echo ""
     
-    # Load configuration from .server-config
+    # Load configuration from .server-config (safely, filtering out any log output)
     if [ -f "../.server-config" ]; then
-        source ../.server-config
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Skip empty lines, comments, and lines that don't look like variable assignments
+            if [[ -n "$line" ]] && [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ "$line" =~ ^[A-Z_][A-Z0-9_]*= ]]; then
+                # Remove any ANSI color codes before evaluating
+                clean_line=$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g' | sed 's/\033\[[0-9;]*m//g')
+                eval "$clean_line" 2>/dev/null || true
+            fi
+        done < ../.server-config
     fi
     
     log_info "Server Details:"
     echo "  Instance ID: $INSTANCE_ID"
     echo "  Elastic IP: $ELASTIC_IP"
     echo "  EC2 Host: $EC2_HOST"
-    echo "  S3 Bucket: $S3_BUCKET"
+    if [ -n "$S3_BUCKET_DEV" ]; then
+        echo "  S3 Bucket (DEV): $S3_BUCKET_DEV"
+    fi
+    if [ -n "$S3_BUCKET_PROD" ]; then
+        echo "  S3 Bucket (PROD): $S3_BUCKET_PROD"
+    fi
     echo ""
     log_info "📋 Next Steps - Update GitHub Actions Secrets:"
     echo ""
@@ -632,10 +688,23 @@ main() {
     echo "     Secret Name: EC2_HOST"
     echo "     Secret Value: $EC2_HOST"
     echo ""
-    echo "  3. Update the S3_BUCKET secret with the generated bucket name:"
+    echo "  3. Update the S3 bucket secrets with the generated bucket names:"
     echo ""
-    echo "     Secret Name: S3_BUCKET"
-    echo "     Secret Value: $S3_BUCKET"
+    if [ -f "../.server-config" ]; then
+        source ../.server-config
+        if [ -n "$S3_BUCKET_DEV" ]; then
+            echo "     Secret Name: S3_BUCKET_DEV"
+            echo "     Secret Value: $S3_BUCKET_DEV"
+            echo ""
+        fi
+        if [ -n "$S3_BUCKET_PROD" ]; then
+            echo "     Secret Name: S3_BUCKET_PROD"
+            echo "     Secret Value: $S3_BUCKET_PROD"
+            echo ""
+            echo "     Secret Name: S3_BUCKET (for backward compatibility)"
+            echo "     Secret Value: $S3_BUCKET_PROD"
+        fi
+    fi
     echo ""
     echo "  4. If you don't have EC2_SSH_PRIVATE_KEY secret yet, add it:"
     echo "     Secret Name: EC2_SSH_PRIVATE_KEY"
@@ -655,7 +724,16 @@ main() {
     echo ""
     echo "  📝 Generated Values Summary:"
     echo "     EC2_HOST: $EC2_HOST"
-    echo "     S3_BUCKET: $S3_BUCKET"
+    if [ -f "../.server-config" ]; then
+        source ../.server-config
+        if [ -n "$S3_BUCKET_DEV" ]; then
+            echo "     S3_BUCKET_DEV: $S3_BUCKET_DEV"
+        fi
+        if [ -n "$S3_BUCKET_PROD" ]; then
+            echo "     S3_BUCKET_PROD: $S3_BUCKET_PROD"
+            echo "     S3_BUCKET: $S3_BUCKET_PROD (defaults to prod)"
+        fi
+    fi
     echo "     INSTANCE_ID: $INSTANCE_ID"
     echo ""
     log_info "Configuration saved to: ../.server-config"

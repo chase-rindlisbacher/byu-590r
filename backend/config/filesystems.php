@@ -52,7 +52,9 @@ return [
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('S3_BUCKET'),
+            'bucket' => (in_array(env('APP_ENV'), ['local', 'development', 'dev'], true))
+                ? env('S3_BUCKET_DEV', env('S3_BUCKET'))
+                : env('S3_BUCKET_PROD', env('S3_BUCKET')),
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
