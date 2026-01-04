@@ -24,6 +24,20 @@ chmod +x setup-ec2-server.sh
 ./setup-ec2-server.sh
 ```
 
+**⚠️ Important**: After running the setup script, if you get a new EC2 IP address, you must update the production environment file:
+
+1. Open `web-app/src/environments/environment.prod.ts`
+2. Update the `apiUrl` to use your new EC2 IP address:
+   ```typescript
+   export const environment = {
+   	production: true,
+   	apiUrl: "http://YOUR_NEW_EC2_IP:4444/api/",
+   };
+   ```
+3. Commit and push the change - the frontend will be rebuilt and redeployed automatically
+
+This is required because the production Angular app makes direct API calls (no proxy), so it needs the full URL with the correct IP address.
+
 ### 2. Configure GitHub Actions
 
 **Copy the generated values from the setup script output** and add these secrets to your GitHub repository:
@@ -163,6 +177,8 @@ chmod +x setup-ec2-server.sh
 ### 3. Deploy
 
 Push to `main` branch - GitHub Actions will auto-deploy.
+
+**Note**: If you've updated the EC2 IP in `environment.prod.ts`, make sure to commit and push that change so the frontend is rebuilt with the correct API URL.
 
 ### 4. Verify Deployment
 
