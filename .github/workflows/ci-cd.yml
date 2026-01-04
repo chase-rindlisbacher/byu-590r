@@ -74,7 +74,7 @@ jobs:
           OUTPUT=$(composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist 2>&1)
           EXIT_CODE=$?
           set -e
-          
+
           if [ $EXIT_CODE -eq 0 ]; then
             echo "Composer install succeeded"
           elif echo "$OUTPUT" | grep -q "does not contain a compatible set of packages"; then
@@ -254,14 +254,15 @@ jobs:
             rm -f bootstrap/cache/config.php
             php artisan config:clear
             
-            # Run database migrations
-            php artisan migrate --force
+            # Create storage directories if they don't exist
+            sudo mkdir -p /var/www/html/api/storage/framework/cache
+            sudo mkdir -p /var/www/html/api/storage/framework/sessions
+            sudo mkdir -p /var/www/html/api/storage/framework/views
+            sudo mkdir -p /var/www/html/api/storage/logs
+            sudo mkdir -p /var/www/html/api/storage/app
+            sudo mkdir -p /var/www/html/api/bootstrap/cache
             
-            # Configure Laravel for production (skip config cache to avoid APP_KEY issues)
-            php artisan route:cache
-            php artisan view:cache
-            
-            # Set proper permissions for Apache
+            # Set proper permissions for Apache (before running artisan commands)
             sudo chown -R www-data:www-data /var/www/html/api
             sudo chmod -R 755 /var/www/html/api
             sudo chmod -R 775 /var/www/html/api/storage
@@ -270,7 +271,17 @@ jobs:
             # Ensure Laravel can write to all necessary directories
             sudo chmod -R 775 /var/www/html/api/storage/logs
             sudo chmod -R 775 /var/www/html/api/storage/framework
+            sudo chmod -R 775 /var/www/html/api/storage/framework/cache
+            sudo chmod -R 775 /var/www/html/api/storage/framework/sessions
+            sudo chmod -R 775 /var/www/html/api/storage/framework/views
             sudo chmod -R 775 /var/www/html/api/storage/app
+            
+            # Run database migrations
+            php artisan migrate --force
+            
+            # Configure Laravel for production (skip config cache to avoid APP_KEY issues)
+            php artisan route:cache
+            php artisan view:cache
             
             # Restart Apache
             sudo systemctl reload apache2
