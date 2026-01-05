@@ -218,10 +218,25 @@ jobs:
             fi
             
             # Update S3_BUCKET from GitHub secrets if provided
+            if [ -n "${{ secrets.S3_BUCKET_PROD }}" ]; then
+              sed -i "s/S3_BUCKET_PROD=.*/S3_BUCKET_PROD=${{ secrets.S3_BUCKET_PROD }}/" .env || echo "S3_BUCKET_PROD=${{ secrets.S3_BUCKET_PROD }}" >> .env
+            fi
+            if [ -n "${{ secrets.S3_BUCKET_DEV }}" ]; then
+              sed -i "s/S3_BUCKET_DEV=.*/S3_BUCKET_DEV=${{ secrets.S3_BUCKET_DEV }}/" .env || echo "S3_BUCKET_DEV=${{ secrets.S3_BUCKET_DEV }}" >> .env
+            fi
             if [ -n "${{ secrets.S3_BUCKET }}" ]; then
-              sed -i "s/S3_BUCKET=.*/S3_BUCKET=${{ secrets.S3_BUCKET }}/" .env
-            else
-              echo "S3_BUCKET=byu-590r-$(date +%s)-prod" >> .env
+              sed -i "s/S3_BUCKET=.*/S3_BUCKET=${{ secrets.S3_BUCKET }}/" .env || echo "S3_BUCKET=${{ secrets.S3_BUCKET }}" >> .env
+            fi
+            
+            # Update AWS credentials from GitHub secrets if provided
+            if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+              sed -i "s/AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}/" .env || echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+            fi
+            if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+              sed -i "s/AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}/" .env || echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+            fi
+            if [ -n "${{ secrets.AWS_DEFAULT_REGION }}" ]; then
+              sed -i "s/AWS_DEFAULT_REGION=.*/AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}/" .env || echo "AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> .env
             fi
             
             # Set APP_ENV to production for deployment
