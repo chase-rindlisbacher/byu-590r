@@ -356,6 +356,8 @@ jobs:
 
       - name: Deploy Frontend to EC2
         run: |
+          EC2_HOST="${{ steps.config.outputs.ec2_host }}"
+
           # Build Angular app locally using make
           make build-frontend-prod
 
