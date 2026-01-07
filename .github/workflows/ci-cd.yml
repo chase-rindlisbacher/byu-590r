@@ -446,8 +446,31 @@ jobs:
             sudo chmod -R 775 /var/www/html/api/storage
             sudo chmod -R 775 /var/www/html/api/bootstrap/cache
             
-            # Restart Apache
-            sudo systemctl reload apache2
+            # Ensure Apache virtual host is enabled and port is configured
+            if [ ! -f /etc/apache2/sites-enabled/byu-590r-backend.conf ]; then
+              sudo a2ensite byu-590r-backend.conf 2>/dev/null || true
+            fi
+            
+            # Ensure port 4444 is listening
+            if ! grep -q "^Listen 4444" /etc/apache2/ports.conf; then
+              echo "Listen 4444" | sudo tee -a /etc/apache2/ports.conf
+            fi
+            
+            # Test Apache configuration
+            sudo apache2ctl configtest
+            
+            # Restart Apache (not just reload) to ensure all changes take effect
+            sudo systemctl restart apache2
+            
+            # Verify Apache is listening on port 4444
+            sleep 2
+            if sudo netstat -tlnp | grep -q ":4444" || sudo ss -tlnp | grep -q ":4444"; then
+              echo "✓ Apache is listening on port 4444"
+            else
+              echo "✗ WARNING: Apache may not be listening on port 4444"
+              echo "Apache error log:"
+              sudo tail -20 /var/log/apache2/byu590r_backend_error.log 2>/dev/null || sudo tail -20 /var/log/apache2/error.log
+            fi
           EOF
 
       - name: Deploy Frontend to EC2
@@ -480,11 +503,35 @@ jobs:
           # Check if services are running
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
             echo "=== Apache Status ==="
-            sudo systemctl status apache2 --no-pager
+            sudo systemctl status apache2 --no-pager || true
+            
+            echo ""
+            echo "=== Apache Virtual Hosts ==="
+            sudo apache2ctl -S 2>/dev/null | grep -E "(443|4444|80)" || true
+            
+            echo ""
+            echo "=== Apache Listening Ports ==="
+            sudo netstat -tlnp | grep apache2 || sudo ss -tlnp | grep apache2 || echo "Could not check listening ports"
+            
+            echo ""
             echo "=== MySQL Status ==="
-            sudo systemctl status mysql --no-pager
-            echo "=== Laravel API Test ==="
-            curl -f http://localhost:4444/api/hello || echo "API endpoint not responding"
+            sudo systemctl status mysql --no-pager || true
+            
+            echo ""
+            echo "=== Laravel API Test (localhost) ==="
+            curl -v http://localhost:4444/api/hello 2>&1 | head -20 || echo "API endpoint not responding on localhost"
+            
+            echo ""
+            echo "=== Laravel API Test (public IP) ==="
+            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "unknown")
+            echo "Public IP: $PUBLIC_IP"
+            curl -v http://$PUBLIC_IP:4444/api/hello 2>&1 | head -20 || echo "API endpoint not responding on public IP"
+            
+            echo ""
+            echo "=== Apache Backend Error Log (last 30 lines) ==="
+            sudo tail -30 /var/log/apache2/byu590r_backend_error.log 2>/dev/null || sudo tail -30 /var/log/apache2/error.log 2>/dev/null || echo "No error log found"
+            
+            echo ""
             echo "=== Frontend Test ==="
             curl -f http://localhost/ || echo "Frontend not responding"
           EOF
