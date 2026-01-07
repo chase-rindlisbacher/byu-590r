@@ -388,10 +388,10 @@ jobs:
               php artisan key:generate
             fi
             
-            # Clear ALL caches to ensure database config is loaded fresh
+            # Clear config cache to ensure database config is loaded fresh
+            # Skip cache:clear here since cache table doesn't exist until after migrations
             rm -f bootstrap/cache/config.php
             php artisan config:clear
-            php artisan cache:clear
             
             # Double-check database connection is set to mysql
             if ! grep -q "DB_CONNECTION=mysql" .env; then
@@ -431,6 +431,10 @@ jobs:
             # Explicitly use mysql connection and verify connection works
             php artisan config:clear
             php artisan migrate:fresh --seed --force --database=mysql
+            
+            # Now that migrations have run and cache table exists, clear cache properly
+            php artisan cache:clear
+            php artisan config:clear
             
             # Configure Laravel for production (skip config cache to avoid APP_KEY issues)
             php artisan route:cache
