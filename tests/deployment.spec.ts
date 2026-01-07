@@ -128,4 +128,38 @@ test.describe("Deployment Verification", () => {
 		const corsHeader = response.headers()["access-control-allow-origin"];
 		expect(corsHeader).toBeTruthy();
 	});
+
+	test("Backend API login should succeed with seeded test user credentials", async ({
+		request,
+	}: {
+		request: APIRequestContext;
+	}) => {
+		// Test login with credentials from UsersSeeder
+		// Email: testuser@test.com, Password: password12345
+		const response = await request.post(`${BACKEND_URL}/api/login`, {
+			multipart: {
+				email: "testuser@test.com",
+				password: "password12345",
+			},
+		});
+
+		// Should succeed with valid credentials
+		expect(response.ok()).toBeTruthy();
+		expect(response.status()).toBe(200);
+
+		// Should return JSON response with success data
+		const body = await response.json();
+		expect(body).toBeTruthy();
+
+		// Verify successful login response structure
+		expect(body.success).toBe(true);
+		expect(body.results).toBeTruthy();
+		expect(body.results.token).toBeTruthy();
+		expect(body.results.name).toBe("Test User");
+		expect(body.message).toContain("login successfully");
+
+		// Verify CORS headers are present
+		const corsHeader = response.headers()["access-control-allow-origin"];
+		expect(corsHeader).toBeTruthy();
+	});
 });
