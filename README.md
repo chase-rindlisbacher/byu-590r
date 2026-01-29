@@ -16,7 +16,7 @@ Laravel backend + Angular frontend with AWS EC2 deployment.
 
 ## Quick Start
 
-### 1. Setup EC2 Server
+
 
 ```bash
 cd devops/bash
