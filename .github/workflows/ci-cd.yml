@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd web-app
-          npm ci
+          npm install
 
       - name: Run tests
         run: |
@@ -176,7 +176,7 @@ jobs:
       - name: Deploy frontend
         run: |
           cd web-app
-          npm ci
+          npm install
           npm run build
 
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo mkdir -p /var/www/html/app && sudo chown -R ubuntu:ubuntu /var/www/html/app"
