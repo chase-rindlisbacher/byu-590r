@@ -69,9 +69,12 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
+          set +e
           composer install --no-interaction --no-scripts --prefer-dist
-          # If lock file is incompatible, update and retry
-          if [ $? -ne 0 ]; then
+          EXIT=$?
+          set -e
+          # If lock file is incompatible with PHP 8.3 (e.g. has Symfony 8), run update so Composer resolves for platform
+          if [ $EXIT -ne 0 ]; then
             composer update --no-interaction --no-scripts --prefer-dist
           fi
 
