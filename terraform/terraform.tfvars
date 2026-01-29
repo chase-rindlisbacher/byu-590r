@@ -1,5 +1,5 @@
 # BYU 590R Monorepo Terraform Variables
-# Copy this file to terraform.tfvars and fill in your values
+# This file contains non-sensitive infrastructure configuration and is committed to the repository
 
 # AWS Configuration
 aws_region  = "us-west-1"

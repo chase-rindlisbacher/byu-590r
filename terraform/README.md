@@ -57,27 +57,21 @@ After cloning the repo, set up Terraform and create infrastructure as follows.
    cd devops/terraform
    ```
 
-2. **Copy the variables template**
+2. **(Optional) Edit `terraform.tfvars`** with your values if needed. The file is committed to the repo with non-sensitive defaults. You can override values for your environment.
 
-   ```bash
-   cp terraform.tfvars.example terraform.tfvars
-   ```
-
-3. **(Optional) Edit `terraform.tfvars`** with your values. If the defaults in `variables.tf` are fine, you can leave it as-is.
-
-4. **Initialize Terraform** — downloads providers; uses the committed `.terraform.lock.hcl` so everyone gets the same provider versions.
+3. **Initialize Terraform** — downloads providers; uses the committed `.terraform.lock.hcl` so everyone gets the same provider versions.
 
    ```bash
    terraform init
    ```
 
-5. **Review the plan**
+4. **Review the plan**
 
    ```bash
    terraform plan
    ```
 
-6. **Apply the configuration**
+5. **Apply the configuration**
 
    ```bash
    terraform apply
@@ -85,19 +79,19 @@ After cloning the repo, set up Terraform and create infrastructure as follows.
 
 **Notes:**
 
-- **Do not commit `terraform.tfvars`** — it is gitignored; it may contain account-specific or sensitive values. Use it only locally (or supply values via env vars / SSM if you adopt that later).
-- **Do commit `.terraform.lock.hcl`** — it is not gitignored; keeping it in the repo ensures consistent provider versions for everyone and for CI.
+- **`terraform.tfvars` is committed** — it contains non-sensitive infrastructure configuration (region, instance type, etc.). Modify it as needed for your environment.
+- **Do commit `.terraform.lock.hcl`** — keeping it in the repo ensures consistent provider versions for everyone and for CI.
+- **For sensitive values** (like GitHub tokens), use environment variables or create a `secrets.tfvars` file (gitignored).
 
 ## Usage
 
-1. **Copy the example variables file** (if you have not already; see [Setup from a clean clone](#setup-from-a-clean-clone)):
+1. **Go to the Terraform directory**:
 
    ```bash
    cd devops/terraform
-   cp terraform.tfvars.example terraform.tfvars
    ```
 
-2. **Edit `terraform.tfvars`** with your specific values (optional, defaults are provided)
+2. **(Optional) Edit `terraform.tfvars`** if you need to customize values for your environment
 
 3. **Initialize Terraform**:
 

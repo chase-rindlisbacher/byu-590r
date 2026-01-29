@@ -114,14 +114,6 @@ jobs:
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" \
             backend/ ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/api/
 
-          # Download Composer on runner (EC2 may not have outbound HTTPS) and copy to server
-          for i in 1 2 3; do
-            curl -sS -L --connect-timeout 60 -o composer.phar https://getcomposer.org/download/latest-stable/composer.phar && break
-            [ $i -eq 3 ] && exit 1
-            echo "Retry $i/3 in 10s..." && sleep 10
-          done
-          scp -o StrictHostKeyChecking=no composer.phar ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/api/
-
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'REMOTE'
           set -e
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
@@ -133,19 +125,16 @@ jobs:
           [ -z "$PHP_BIN" ] && [ -x /usr/bin/php8.1 ] && PHP_BIN=/usr/bin/php8.1
           [ -z "$PHP_BIN" ] && [ -x /usr/bin/php ] && PHP_BIN=/usr/bin/php
           if [ -z "$PHP_BIN" ]; then
-            echo "PHP not found. Ensure EC2 was set up with Terraform user_data (php8.3)."
+            echo "ERROR: PHP not found. Ensure EC2 was provisioned with Terraform user_data (installs php8.3)."
             exit 1
           fi
 
-          # Use Composer: prefer system composer, else the phar we copied from the runner (no server outbound needed)
-          if command -v composer >/dev/null 2>&1; then
-            COMPOSER_CMD=$(which composer)
-          elif [ -f composer.phar ]; then
-            COMPOSER_CMD="$PHP_BIN composer.phar"
-          else
-            echo "Composer not found. composer.phar should have been copied."
+          # Use system Composer (installed by Terraform user_data)
+          if ! command -v composer >/dev/null 2>&1; then
+            echo "ERROR: Composer not found. Ensure EC2 was provisioned with Terraform user_data (installs composer to /usr/local/bin)."
             exit 1
           fi
+          COMPOSER_CMD=composer
 
           # .env: create from example if needed, then apply secrets
           if [ ! -f .env ]; then
