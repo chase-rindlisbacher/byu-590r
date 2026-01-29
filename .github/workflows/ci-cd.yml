@@ -114,6 +114,14 @@ jobs:
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" \
             backend/ ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/api/
 
+          # If EC2 has no Composer (user_data failed or instance not from Terraform), provide composer.phar from runner
+          for i in 1 2 3; do
+            curl -sS -L --connect-timeout 60 -o composer.phar https://getcomposer.org/download/latest-stable/composer.phar && break
+            [ $i -eq 3 ] && exit 1
+            echo "Retry $i/3 in 10s..." && sleep 10
+          done
+          scp -o StrictHostKeyChecking=no composer.phar ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/api/
+
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'REMOTE'
           set -e
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
@@ -129,12 +137,15 @@ jobs:
             exit 1
           fi
 
-          # Use system Composer (installed by Terraform user_data)
-          if ! command -v composer >/dev/null 2>&1; then
-            echo "ERROR: Composer not found. Ensure EC2 was provisioned with Terraform user_data (installs composer to /usr/local/bin)."
+          # Use Composer: system (from Terraform user_data) or composer.phar copied from runner
+          if command -v composer >/dev/null 2>&1; then
+            COMPOSER_CMD=composer
+          elif [ -f composer.phar ]; then
+            COMPOSER_CMD="$PHP_BIN composer.phar"
+          else
+            echo "ERROR: Composer not found and composer.phar was not copied."
             exit 1
           fi
-          COMPOSER_CMD=composer
 
           # .env: create from example if needed, then apply secrets
           if [ ! -f .env ]; then
