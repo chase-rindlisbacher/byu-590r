@@ -110,7 +110,7 @@ test.describe("Deployment Verification", () => {
 	}) => {
 		// Test that login endpoint exists and responds (even if credentials are wrong)
 		const response = await request.post(`${BACKEND_URL}/api/login`, {
-			multipart: {
+			data: {
 				email: "test@example.com",
 				password: "wrongpassword",
 			},
@@ -119,8 +119,15 @@ test.describe("Deployment Verification", () => {
 		// Should respond (even if unauthorized)
 		expect(response.status()).toBeTruthy();
 
-		// Should return JSON response
-		const body = await response.json();
+		// Should return JSON response (API returns JSON, not HTML)
+		const contentType = response.headers()["content-type"] || "";
+		const text = await response.text();
+		if (!contentType.includes("application/json")) {
+			throw new Error(
+				`Login endpoint returned non-JSON (status ${response.status()}). Body starts with: ${text.slice(0, 200)}`,
+			);
+		}
+		const body = JSON.parse(text);
 		expect(body).toBeTruthy();
 
 		// If credentials are wrong, should have error message
@@ -137,18 +144,30 @@ test.describe("Deployment Verification", () => {
 		// Test login with credentials from UsersSeeder
 		// Email: testuser@test.com, Password: password12345
 		const response = await request.post(`${BACKEND_URL}/api/login`, {
-			multipart: {
+			data: {
 				email: "testuser@test.com",
 				password: "password12345",
 			},
 		});
 
 		// Should succeed with valid credentials
+		const text = await response.text();
+		const contentType = response.headers()["content-type"] || "";
+		if (!response.ok()) {
+			throw new Error(
+				`Login failed (status ${response.status()}). Content-Type: ${contentType}. Body: ${text.slice(0, 300)}`,
+			);
+		}
 		expect(response.ok()).toBeTruthy();
 		expect(response.status()).toBe(200);
 
 		// Should return JSON response with success data
-		const body = await response.json();
+		if (!contentType.includes("application/json")) {
+			throw new Error(
+				`Login returned non-JSON. Body starts with: ${text.slice(0, 200)}`,
+			);
+		}
+		const body = JSON.parse(text);
 		expect(body).toBeTruthy();
 
 		// Verify successful login response structure

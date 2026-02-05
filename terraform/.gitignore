@@ -1,0 +1,32 @@
+# Terraform best practices:
+# - Do NOT commit: state (*.tfstate, *.tfstate.*), .terraform/ (local provider binaries).
+# - DO commit: .terraform.lock.hcl so everyone and CI use the same provider versions (do not add it below).
+# - terraform.tfvars is now commitable (contains non-sensitive configuration)
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Only ignore .tfvars files that contain secrets (terraform.tfvars is now tracked)
+*.auto.tfvars
+secrets.tfvars
+*secret*.tfvars
+
+# Ignore override files as they are usually used to override resources locally
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Do NOT add .terraform.lock.hcl here; commit it so everyone uses the same provider versions.

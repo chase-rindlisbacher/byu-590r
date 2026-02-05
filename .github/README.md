@@ -11,22 +11,35 @@ This repository uses GitHub Actions for automated testing and deployment to AWS 
    ./setup-server-only.sh
    ```
 
-2. **GitHub Secrets**: Add the following secrets to your GitHub repository:
-   - Go to your repository on GitHub
-   - Navigate to Settings → Secrets and variables → Actions
-   - Click "New repository secret" and add:
+2. **GitHub Secrets**: Add the secrets listed below. Each secret has a **source**: **A) Terraform**, **B) backend/.env**, **C) AWS credentials**, or **Manual**. Go to Settings → Secrets and variables → Actions and add each one as described.
 
-### Required Secrets
+### GitHub Actions secrets: where each value comes from
 
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `EC2_HOST` | Public IP address of your EC2 instance | `3.101.62.67` |
-| `EC2_SSH_PRIVATE_KEY` | Contents of your SSH private key file | Contents of `~/.ssh/byu-590r.pem` |
+| Secret | Source | How to populate |
+|--------|--------|------------------|
+| **A) Terraform (IaC)** | | |
+| `EC2_HOST` | A | After `terraform apply`, these can be updated automatically if you set `manage_github_secrets = true` and `github_token` (PAT with repo Secrets write) in Terraform. Otherwise copy from `terraform output github_actions_secrets` or `terraform output ec2_host`. |
+| `S3_BUCKET` | A | Same as above; value is the prod bucket name from Terraform. |
+| `S3_BUCKET_DEV` | A | Same as above; value is the dev bucket name from Terraform. |
+| `S3_BUCKET_PROD` | A | Same as above; value is the prod bucket name from Terraform. |
+| `INSTANCE_ID` | A | Optional; same as above; value is the EC2 instance ID from Terraform. |
+| **B) backend/.env (make start)** | | |
+| `DB_DATABASE` | B | Copy from your `backend/.env` (local: e.g. `app_app`; EC2 deploy uses `byu_590r_app` from Terraform user_data). Use [backend/.env.example](../backend/.env.example) for key names. |
+| `DB_USERNAME` | B | Copy from `backend/.env` (e.g. `app_user` / `byu_user`). For EC2 deploy, use the user created by Terraform user_data (e.g. `byu_user`). |
+| `DB_PASSWORD` | B | Copy from `backend/.env` (e.g. `app_password`). For EC2 deploy, use the password from Terraform user_data (e.g. `trees243`). |
+| `APP_DEBUG` | B | Copy from `backend/.env` (e.g. `true` or `false`). |
+| `OPENAI_API_KEY` | B | Copy from `backend/.env` if you use OpenAI. |
+| `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION` | B | Optional; copy from `backend/.env` if you use mail. See [backend/.env.example](../backend/.env.example). |
+| **C) AWS credentials** | | |
+| `AWS_ACCESS_KEY_ID` | C | Use your AWS IAM credentials (e.g. from `aws configure` or AWS Console). Same as used for Terraform or a deploy-only IAM user. |
+| `AWS_SECRET_ACCESS_KEY` | C | Same as above. |
+| `AWS_REGION` or `AWS_DEFAULT_REGION` | C | Region (e.g. `us-west-1`). Can match Terraform `aws_region`. |
+| **Manual (not A/B/C)** | | |
+| `EC2_SSH_PRIVATE_KEY` | Manual | Copy the contents of `~/.ssh/<key_name>.pem` (e.g. `byu-590r.pem`) **after** the EC2 instance exists. Do not commit or put in Terraform/backend .env. |
 
-### How to get the SSH Private Key
+**How to get the SSH private key (Manual):**
 
 ```bash
-# Display the private key content
 cat ~/.ssh/byu-590r.pem
 ```
 

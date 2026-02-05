@@ -10,31 +10,27 @@ jobs:
   test-frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18.20.8"
+          node-version: "18"
           cache: "npm"
           cache-dependency-path: web-app/package-lock.json
 
       - name: Install dependencies
         run: |
           cd web-app
-          npm --version
-          node --version
           npm install
 
-      - name: Run Angular tests
+      - name: Run tests
         run: |
           cd web-app
           npm run test -- --watch=false --browsers=ChromeHeadless
 
-      - name: Build Angular app
+      - name: Build
         run: |
           cd web-app
           npm run build
@@ -42,707 +38,209 @@ jobs:
   test-backend:
     name: Backend Tests
     runs-on: ubuntu-latest
-
     services:
       mysql:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: ${{ secrets.DB_DATABASE || 'byu_590r_app' }}_test
-          MYSQL_USER: ${{ secrets.DB_USERNAME || 'byu_user' }}
-          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD || 'byu_password' }}
+          MYSQL_DATABASE: byu_590r_app_test
+          MYSQL_USER: byu_user
+          MYSQL_PASSWORD: byu_password
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
           extensions: mbstring, dom, fileinfo, mysql
           coverage: none
+          # Composer is installed by default; no curl to getcomposer.org
 
-      - name: Install Composer dependencies
+      - name: Install dependencies
         run: |
           cd backend
-          # Try install first, fall back to update if lock file is incompatible
           set +e
-          OUTPUT=$(composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist 2>&1)
-          EXIT_CODE=$?
+          composer install --no-interaction --no-scripts --prefer-dist
+          EXIT=$?
           set -e
-
-          if [ $EXIT_CODE -eq 0 ]; then
-            echo "Composer install succeeded"
-          elif echo "$OUTPUT" | grep -q "does not contain a compatible set of packages"; then
-            echo "Lock file incompatible, running composer update..."
-            composer update -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
-          else
-            echo "Composer install failed: $OUTPUT"
-            exit $EXIT_CODE
+          # If lock file is incompatible with PHP 8.3 (e.g. has Symfony 8), run update so Composer resolves for platform
+          if [ $EXIT -ne 0 ]; then
+            composer update --no-interaction --no-scripts --prefer-dist
           fi
 
-      - name: Setup Laravel environment
+      - name: Configure .env for tests
         run: |
           cd backend
           cp .env.example .env
-          php artisan key:generate
+          php artisan key:generate --no-interaction
+          sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
+          sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env
+          sed -i 's/DB_DATABASE=.*/DB_DATABASE=byu_590r_app_test/' .env
+          sed -i 's/DB_USERNAME=.*/DB_USERNAME=byu_user/' .env
+          sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=byu_password/' .env
+          # Override with secrets if set
+          if [ -n "${{ secrets.DB_DATABASE }}" ]; then sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.DB_DATABASE }}_test/" .env; fi
+          if [ -n "${{ secrets.DB_USERNAME }}" ]; then sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ secrets.DB_USERNAME }}/" .env; fi
+          if [ -n "${{ secrets.DB_PASSWORD }}" ]; then sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/" .env; fi
 
-          # Set database connection to MySQL for CI environment
-          sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env || echo "DB_CONNECTION=mysql" >> .env
-          sed -i 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env || sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env || echo "DB_HOST=127.0.0.1" >> .env
-          sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env || echo "DB_PORT=3306" >> .env
-
-          # Use secrets for database configuration
-          if [ -n "${{ secrets.DB_DATABASE }}" ]; then
-            sed -i "s/DB_DATABASE=.*/DB_DATABASE=${{ secrets.DB_DATABASE }}_test/" .env
-          else
-            sed -i 's/DB_DATABASE=.*/DB_DATABASE=byu_590r_app_test/' .env || echo "DB_DATABASE=byu_590r_app_test" >> .env
-          fi
-
-          if [ -n "${{ secrets.DB_USERNAME }}" ]; then
-            sed -i "s/DB_USERNAME=.*/DB_USERNAME=${{ secrets.DB_USERNAME }}/" .env
-          else
-            sed -i 's/DB_USERNAME=.*/DB_USERNAME=byu_user/' .env || echo "DB_USERNAME=byu_user" >> .env
-          fi
-
-          if [ -n "${{ secrets.DB_PASSWORD }}" ]; then
-            sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/" .env
-          else
-            sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=byu_password/' .env || echo "DB_PASSWORD=byu_password" >> .env
-          fi
-
-          # Use APP_DEBUG from secrets if provided
-          if [ -n "${{ secrets.APP_DEBUG }}" ]; then
-            sed -i "s/APP_DEBUG=.*/APP_DEBUG=${{ secrets.APP_DEBUG }}/" .env
-          else
-            echo "APP_DEBUG=true" >> .env
-          fi
-
-          # Add OPENAI_API_KEY from secrets if provided
-          if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
-            sed -i "s/OPENAI_API_KEY=.*/OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}/" .env
-          fi
-
-          # Add S3_BUCKET from secrets if provided
-          if [ -n "${{ secrets.S3_BUCKET }}" ]; then
-            sed -i "s/S3_BUCKET=.*/S3_BUCKET=${{ secrets.S3_BUCKET }}/" .env
-          else
-            echo "S3_BUCKET=byu-590r-$(date +%s)-test" >> .env
-          fi
-
-          # Add AWS credentials for S3 testing
-          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
-          fi
-          if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
-          fi
-          if [ -n "${{ secrets.AWS_REGION }}" ]; then
-            echo "AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}" >> .env
-          else
-            echo "AWS_DEFAULT_REGION=us-west-1" >> .env
-          fi
-
-      - name: Update phpunit.xml for MySQL
-        run: |
-          cd backend
-          cat > update_phpunit.py << 'PYEOF'
-          import xml.etree.ElementTree as ET
-          import os
-          import sys
-
-          db_name = (os.environ.get('DB_DATABASE_VAR', '') or 'byu_590r_app') + '_test'
-          db_user = os.environ.get('DB_USERNAME_VAR', '') or 'byu_user'
-          db_pass = os.environ.get('DB_PASSWORD_VAR', '') or 'byu_password'
-
-          tree = ET.parse('phpunit.xml')
-          root = tree.getroot()
-          php_section = root.find('.//php')
-
-          if php_section is not None:
-              for env in php_section.findall('env'):
-                  name = env.get('name')
-                  if name == 'DB_CONNECTION':
-                      env.set('value', 'mysql')
-                  elif name == 'DB_DATABASE':
-                      env.set('value', db_name)
-              
-              env_names = [e.get('name') for e in php_section.findall('env')]
-              mysql_config = [
-                  ('DB_HOST', '127.0.0.1'),
-                  ('DB_PORT', '3306'),
-                  ('DB_USERNAME', db_user),
-                  ('DB_PASSWORD', db_pass)
-              ]
-              
-              for env_name, env_value in mysql_config:
-                  if env_name not in env_names:
-                      new_env = ET.SubElement(php_section, 'env')
-                      new_env.set('name', env_name)
-                      new_env.set('value', env_value)
-
-          ET.indent(tree, space='    ')
-          with open('phpunit.xml', 'wb') as f:
-              tree.write(f, encoding='utf-8', xml_declaration=True)
-          PYEOF
-          DB_DATABASE_VAR="${{ secrets.DB_DATABASE }}" \
-          DB_USERNAME_VAR="${{ secrets.DB_USERNAME }}" \
-          DB_PASSWORD_VAR="${{ secrets.DB_PASSWORD }}" \
-          python3 update_phpunit.py
-          rm -f update_phpunit.py
-
-      - name: Run Laravel tests
+      - name: Run tests
         run: |
           cd backend
           php artisan test
 
-      - name: Generate Laravel application key
-        run: |
-          cd backend
-          php artisan key:generate
-
   deploy-to-ec2:
-    name: Prod Deploy
+    name: Deploy to EC2
     needs: [test-frontend, test-backend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Set up SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
 
-      - name: Deploy Backend to EC2
+      - name: Deploy backend
         run: |
-          # Create directories and set permissions first
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            sudo mkdir -p /var/www/html/api
-            sudo chown -R ubuntu:ubuntu /var/www/html/api
-          EOF
-
-          # Copy backend files to EC2
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo mkdir -p /var/www/html/api && sudo chown -R ubuntu:ubuntu /var/www/html/api"
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" \
             backend/ ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/api/
 
-          # Use make deploy-ec2 for backend setup
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /var/www/html/api
-            
-            # Set proper ownership for configuration
-            sudo chown -R ubuntu:ubuntu /var/www/html/api
-            
-            # Create .env file if it doesn't exist
-            if [ ! -f .env ]; then
-              cp .env.example .env
-              chmod 644 .env
-            fi
-            
-            # Set database connection to MySQL (ensure it exists)
-            if grep -q "^DB_CONNECTION=" .env; then
-              sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
-            else
-              echo "DB_CONNECTION=mysql" >> .env
-            fi
-            
-            # Fix DB_HOST for server deployment (change from mysql to localhost)
-            if grep -q "^DB_HOST=" .env; then
-              sed -i 's/^DB_HOST=.*/DB_HOST=localhost/' .env
-            else
-              echo "DB_HOST=localhost" >> .env
-            fi
-            
-            # Set DB_PORT to 3306 for MySQL
-            if grep -q "^DB_PORT=" .env; then
-              sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env
-            else
-              echo "DB_PORT=3306" >> .env
-            fi
-            
-            # Update .env with GitHub secrets if provided
-            if [ -n "${{ secrets.DB_PASSWORD }}" ]; then
-              if grep -q "^DB_PASSWORD=" .env; then
-                sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/" .env
-              else
-                echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-              fi
-            else
-              if grep -q "^DB_PASSWORD=" .env; then
-                sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=byu_password/" .env
-              else
-                echo "DB_PASSWORD=byu_password" >> .env
-              fi
-            fi
-            
-            if [ -n "${{ secrets.DB_USERNAME }}" ]; then
-              if grep -q "^DB_USERNAME=" .env; then
-                sed -i "s/^DB_USERNAME=.*/DB_USERNAME=${{ secrets.DB_USERNAME }}/" .env
-              else
-                echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
-              fi
-            else
-              if grep -q "^DB_USERNAME=" .env; then
-                sed -i "s/^DB_USERNAME=.*/DB_USERNAME=byu_user/" .env
-              else
-                echo "DB_USERNAME=byu_user" >> .env
-              fi
-            fi
-            
-            if [ -n "${{ secrets.DB_DATABASE }}" ]; then
-              if grep -q "^DB_DATABASE=" .env; then
-                sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${{ secrets.DB_DATABASE }}/" .env
-              else
-                echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
-              fi
-            else
-              if grep -q "^DB_DATABASE=" .env; then
-                sed -i "s/^DB_DATABASE=.*/DB_DATABASE=byu_590r_app/" .env
-              else
-                echo "DB_DATABASE=byu_590r_app" >> .env
-              fi
-            fi
-            
-            # Update APP_DEBUG from GitHub secrets if provided
-            if [ -n "${{ secrets.APP_DEBUG }}" ]; then
-              sed -i "s/APP_DEBUG=.*/APP_DEBUG=${{ secrets.APP_DEBUG }}/" .env
-            else
-              echo "APP_DEBUG=true" >> .env
-            fi
-            
-            # Update OPENAI_API_KEY from GitHub secrets if provided
-            if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
-              sed -i "s/OPENAI_API_KEY=.*/OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}/" .env
-            fi
-            
-            # Update S3_BUCKET from GitHub secrets if provided
-            if [ -n "${{ secrets.S3_BUCKET_PROD }}" ]; then
-              sed -i "s/S3_BUCKET_PROD=.*/S3_BUCKET_PROD=${{ secrets.S3_BUCKET_PROD }}/" .env || echo "S3_BUCKET_PROD=${{ secrets.S3_BUCKET_PROD }}" >> .env
-            fi
-            if [ -n "${{ secrets.S3_BUCKET_DEV }}" ]; then
-              sed -i "s/S3_BUCKET_DEV=.*/S3_BUCKET_DEV=${{ secrets.S3_BUCKET_DEV }}/" .env || echo "S3_BUCKET_DEV=${{ secrets.S3_BUCKET_DEV }}" >> .env
-            fi
-            if [ -n "${{ secrets.S3_BUCKET }}" ]; then
-              sed -i "s/S3_BUCKET=.*/S3_BUCKET=${{ secrets.S3_BUCKET }}/" .env || echo "S3_BUCKET=${{ secrets.S3_BUCKET }}" >> .env
-            fi
-            
-            # Update AWS credentials from GitHub secrets if provided
-            if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-              sed -i "s/AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}/" .env || echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
-            fi
-            if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-              sed -i "s/AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}/" .env || echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
-            fi
-            if [ -n "${{ secrets.AWS_DEFAULT_REGION }}" ]; then
-              sed -i "s/AWS_DEFAULT_REGION=.*/AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}/" .env || echo "AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> .env
-            fi
-            
-            # Set APP_ENV to production for deployment
-            sed -i "s/APP_ENV=.*/APP_ENV=production/" .env || echo "APP_ENV=production" >> .env
-            
-            # Verify database configuration is set correctly (after all settings)
-            echo "=== Verifying database configuration ==="
-            if ! grep -q "^DB_CONNECTION=" .env; then
-              echo "ERROR: DB_CONNECTION not found in .env, adding it..."
-              echo "DB_CONNECTION=mysql" >> .env
-            fi
-            if ! grep -q "^DB_HOST=" .env; then
-              echo "ERROR: DB_HOST not found in .env, adding it..."
-              echo "DB_HOST=localhost" >> .env
-            fi
-            if ! grep -q "^DB_DATABASE=" .env; then
-              echo "ERROR: DB_DATABASE not found in .env, adding default..."
-              echo "DB_DATABASE=byu_590r_app" >> .env
-            fi
-            echo "Database configuration:"
-            grep "^DB_" .env | head -6
-            
-            # Clear any cached config BEFORE composer install to ensure fresh config
-            rm -f bootstrap/cache/config.php
-            php artisan config:clear 2>/dev/null || true
-            
-            # Try install first, fall back to update if lock file is incompatible
-            set +e
-            OUTPUT=$(composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --no-dev --optimize-autoloader 2>&1)
-            EXIT_CODE=$?
-            set -e
-            
-            if [ $EXIT_CODE -eq 0 ]; then
-              echo "Composer install succeeded"
-            elif echo "$OUTPUT" | grep -q "does not contain a compatible set of packages"; then
-              echo "Lock file incompatible, running composer update..."
-              composer update -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --no-dev --optimize-autoloader
-            else
-              echo "Composer install failed: $OUTPUT"
-              exit $EXIT_CODE
-            fi
-            
-            # Generate application key if not set
-            if ! grep -q "APP_KEY=" .env || grep -q "APP_KEY=$" .env; then
-              php artisan key:generate
-            fi
-            
-            # Clear config cache to ensure database config is loaded fresh
-            # Skip cache:clear here since cache table doesn't exist until after migrations
-            rm -f bootstrap/cache/config.php
-            php artisan config:clear
-            
-            # Double-check database connection is set to mysql
-            if ! grep -q "DB_CONNECTION=mysql" .env; then
-              echo "WARNING: DB_CONNECTION not set to mysql, fixing..."
-              sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env || echo "DB_CONNECTION=mysql" >> .env
-            fi
-            
-            # Verify database configuration again after all changes
-            echo "=== Final database configuration check ==="
-            cat .env | grep -E "^DB_" | head -10
-            
-            # Create storage directories if they don't exist
-            sudo mkdir -p /var/www/html/api/storage/framework/cache
-            sudo mkdir -p /var/www/html/api/storage/framework/sessions
-            sudo mkdir -p /var/www/html/api/storage/framework/views
-            sudo mkdir -p /var/www/html/api/storage/logs
-            sudo mkdir -p /var/www/html/api/storage/app
-            sudo mkdir -p /var/www/html/api/bootstrap/cache
-            
-            # Set ownership to ubuntu:www-data so both ubuntu (for artisan commands) and www-data (for Apache) can write
-            sudo chown -R ubuntu:www-data /var/www/html/api
-            sudo chmod -R 755 /var/www/html/api
-            
-            # Set writable permissions for storage and cache directories (775 allows group write)
-            sudo chmod -R 775 /var/www/html/api/storage
-            sudo chmod -R 775 /var/www/html/api/bootstrap/cache
-            
-            # Ensure all storage subdirectories have correct permissions
-            sudo chmod -R 775 /var/www/html/api/storage/logs
-            sudo chmod -R 775 /var/www/html/api/storage/framework
-            sudo chmod -R 775 /var/www/html/api/storage/framework/cache
-            sudo chmod -R 775 /var/www/html/api/storage/framework/sessions
-            sudo chmod -R 775 /var/www/html/api/storage/framework/views
-            sudo chmod -R 775 /var/www/html/api/storage/app
-            
-            # Run database migrations fresh with seeding
-            # Explicitly use mysql connection and verify connection works
-            php artisan config:clear
-            php artisan migrate:fresh --seed --force --database=mysql
-            
-            # Now that migrations have run and cache table exists, clear cache properly
-            php artisan cache:clear
-            php artisan config:clear
-            
-            # Configure Laravel for production (skip config cache to avoid APP_KEY issues)
-            php artisan route:cache
-            php artisan view:cache
-            
-            # Final permission fix after artisan commands (in case files were created)
-            sudo chown -R ubuntu:www-data /var/www/html/api/storage
-            sudo chown -R ubuntu:www-data /var/www/html/api/bootstrap/cache
-            sudo chmod -R 775 /var/www/html/api/storage
-            sudo chmod -R 775 /var/www/html/api/bootstrap/cache
-            
-            # Ensure PHP module is enabled
-            echo "=== Checking PHP module ==="
-            php -v
-            if ! php -m | grep -q "pdo_mysql"; then
-              echo "WARNING: PDO MySQL extension not loaded"
-            fi
-            
-            # Ensure required Apache modules are enabled
-            echo "=== Enabling Apache modules ==="
-            sudo a2enmod rewrite 2>/dev/null || true
-            sudo a2enmod headers 2>/dev/null || true
-            
-            # Enable PHP module - check for both php8.3 and php8.1
-            if apache2ctl -M 2>/dev/null | grep -q "php8.3"; then
-              echo "✓ PHP 8.3 module is loaded"
-            elif apache2ctl -M 2>/dev/null | grep -q "php"; then
-              echo "✓ PHP module is loaded (version unknown)"
-            else
-              echo "Enabling PHP module..."
-              sudo a2enmod php8.3 2>/dev/null || sudo a2enmod php8.1 2>/dev/null || sudo a2enmod php 2>/dev/null || true
-            fi
-            
-            # List loaded modules for debugging
-            echo "Loaded Apache modules:"
-            apache2ctl -M 2>/dev/null | grep -E "php|rewrite|headers" || echo "Could not list modules"
-            
-            # Verify Laravel public directory exists and has index.php
-            echo "=== Verifying Laravel structure ==="
-            if [ ! -f /var/www/html/api/public/index.php ]; then
-              echo "ERROR: Laravel public/index.php not found!"
-              echo "Checking directory structure:"
-              ls -la /var/www/html/api/ | head -20
-            else
-              echo "✓ Laravel public/index.php exists"
-            fi
-            
-            # Verify .htaccess exists
-            if [ ! -f /var/www/html/api/public/.htaccess ]; then
-              echo "WARNING: .htaccess file not found in public directory"
-            else
-              echo "✓ .htaccess file exists"
-            fi
-            
-            # Ensure Apache virtual host is enabled and port is configured
-            if [ ! -f /etc/apache2/sites-enabled/byu-590r-backend.conf ]; then
-              sudo a2ensite byu-590r-backend.conf 2>/dev/null || true
-            fi
-            
-            # Verify and potentially fix virtual host configuration
-            echo "=== Checking Apache virtual host ==="
-            if [ -f /etc/apache2/sites-available/byu-590r-backend.conf ]; then
-              echo "Virtual host config found:"
-              grep -E "DocumentRoot|Directory|VirtualHost|DirectoryIndex" /etc/apache2/sites-available/byu-590r-backend.conf | head -10
-              
-              # Ensure DirectoryIndex includes index.php
-              if ! grep -q "DirectoryIndex.*index.php" /etc/apache2/sites-available/byu-590r-backend.conf; then
-                echo "WARNING: DirectoryIndex may not include index.php"
-                sudo sed -i '/<Directory.*public>/a\        DirectoryIndex index.php index.html' /etc/apache2/sites-available/byu-590r-backend.conf
-              fi
-              
-              # Ensure PHP handler is configured
-              if ! grep -qE "SetHandler.*php|AddType.*php" /etc/apache2/sites-available/byu-590r-backend.conf; then
-                echo "Adding PHP handler to virtual host..."
-                PHP_HANDLER=$(apache2ctl -M 2>/dev/null | grep -o "php[0-9.]*" | head -1 || echo "php")
-                # Insert PHP handling before closing Directory tag
-                sudo sed -i '/<\/Directory>/i\    # PHP handling\n    <FilesMatch \\.php$>\n        SetHandler application/x-httpd-'$PHP_HANDLER'\n    </FilesMatch>\n    AddType application/x-httpd-php .php' /etc/apache2/sites-available/byu-590r-backend.conf
-              fi
-            else
-              echo "ERROR: Virtual host config not found! Creating it..."
-              printf '%s\n' '<VirtualHost *:4444>' '    ServerName localhost' '    DocumentRoot /var/www/html/api/public' '' '    <Directory /var/www/html/api/public>' '        AllowOverride All' '        Require all granted' '        Options Indexes FollowSymLinks' '' '        # Laravel routing' '        RewriteEngine On' '        RewriteCond %{REQUEST_FILENAME} !-f' '        RewriteCond %{REQUEST_FILENAME} !-d' '        RewriteRule ^(.*)$ index.php [QSA,L]' '' '        # Set index files' '        DirectoryIndex index.php index.html' '    </Directory>' '' '    # PHP handling' '    <FilesMatch \.php$>' '        SetHandler application/x-httpd-php' '    </FilesMatch>' '' '    ErrorLog ${APACHE_LOG_DIR}/byu590r_backend_error.log' '    CustomLog ${APACHE_LOG_DIR}/byu590r_backend_access.log combined' '</VirtualHost>' | sudo tee /etc/apache2/sites-available/byu-590r-backend.conf > /dev/null
-              sudo a2ensite byu-590r-backend.conf
-            fi
-            
-            # Ensure port 4444 is listening
-            if ! grep -q "^Listen 4444" /etc/apache2/ports.conf; then
-              echo "Listen 4444" | sudo tee -a /etc/apache2/ports.conf
-            fi
-            
-            # Test Apache configuration
-            echo "=== Testing Apache configuration ==="
-            sudo apache2ctl configtest
-            
-            # Restart Apache (not just reload) to ensure all changes take effect
-            sudo systemctl restart apache2
-            
-            # Wait for Apache to fully restart
-            sleep 3
-            
-            # Verify Apache is listening on port 4444
-            echo "=== Verifying Apache status ==="
-            LISTEN_CHECK=$(sudo netstat -tlnp 2>/dev/null | grep ":4444" || sudo ss -tlnp 2>/dev/null | grep ":4444" || echo "")
-            if [ -n "$LISTEN_CHECK" ]; then
-              echo "✓ Apache is listening on port 4444"
-              echo "Listening details: $LISTEN_CHECK"
-              # Check if it's listening on all interfaces (0.0.0.0) or just localhost
-              if echo "$LISTEN_CHECK" | grep -q "0.0.0.0:4444\|:::4444"; then
-                echo "✓ Apache is listening on all interfaces (accessible from external)"
-              elif echo "$LISTEN_CHECK" | grep -q "127.0.0.1:4444"; then
-                echo "✗ WARNING: Apache is only listening on localhost (127.0.0.1), not accessible externally!"
-              fi
-            else
-              echo "✗ WARNING: Apache may not be listening on port 4444"
-            fi
-            
-            # Check UFW firewall status
-            echo "=== Checking firewall (UFW) status ==="
-            if command -v ufw >/dev/null 2>&1; then
-              UFW_STATUS=$(sudo ufw status | head -1)
-              echo "UFW Status: $UFW_STATUS"
-              if echo "$UFW_STATUS" | grep -q "active"; then
-                echo "Checking if port 4444 is allowed in UFW:"
-                sudo ufw status | grep "4444" || echo "✗ Port 4444 not found in UFW rules - may need to allow it"
-                echo "To allow port 4444, run: sudo ufw allow 4444/tcp"
-              fi
-            else
-              echo "UFW not installed (this is OK)"
-            fi
-            
-            # Check iptables if UFW isn't managing it
-            echo "=== Checking iptables ==="
-            if sudo iptables -L -n | grep -q "4444"; then
-              echo "iptables rules for port 4444:"
-              sudo iptables -L -n | grep "4444"
-            else
-              echo "No specific iptables rules found for port 4444"
-            fi
-            
-            # Test external connectivity
-            echo "=== Testing external connectivity ==="
-            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "unknown")
-            echo "Public IP: $PUBLIC_IP"
-            echo "Testing if port 4444 is accessible externally (may take a moment)..."
-            # Use nc (netcat) if available, or just curl
-            if command -v nc >/dev/null 2>&1; then
-              if timeout 3 bash -c "echo > /dev/tcp/$PUBLIC_IP/4444" 2>/dev/null; then
-                echo "✓ Port 4444 is accessible externally"
-              else
-                echo "✗ Port 4444 does not appear to be accessible externally"
-                echo "This could be a security group or firewall issue"
-              fi
-            fi
-            
-            # Test PHP processing
-            echo "=== Testing PHP processing ==="
-            if [ -f /var/www/html/api/public/index.php ]; then
-              # Create a test PHP file to verify PHP is working
-              echo "<?php phpinfo(); ?>" | sudo tee /var/www/html/api/public/test-php.php > /dev/null
-              PHP_TEST=$(curl -s http://localhost:4444/test-php.php | head -5)
-              if echo "$PHP_TEST" | grep -q "PHP Version"; then
-                echo "✓ PHP is processing correctly"
-              else
-                echo "✗ WARNING: PHP may not be processing correctly"
-                echo "PHP test response: $PHP_TEST"
-              fi
-              sudo rm -f /var/www/html/api/public/test-php.php
-            fi
-            
-            # Check Apache error logs for issues
-            echo "=== Recent Apache errors ==="
-            sudo tail -30 /var/log/apache2/byu590r_backend_error.log 2>/dev/null || sudo tail -30 /var/log/apache2/error.log 2>/dev/null | tail -10
-          EOF
+          # If EC2 has no Composer (user_data failed or instance not from Terraform), provide composer.phar from runner
+          for i in 1 2 3; do
+            curl -sS -L --connect-timeout 60 -o composer.phar https://getcomposer.org/download/latest-stable/composer.phar && break
+            [ $i -eq 3 ] && exit 1
+            echo "Retry $i/3 in 10s..." && sleep 10
+          done
+          scp -o StrictHostKeyChecking=no composer.phar ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/api/
 
-      - name: Deploy Frontend to EC2
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'REMOTE'
+          set -e
+          export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+          cd /var/www/html/api
+
+          # Resolve PHP (non-interactive SSH often has minimal PATH)
+          PHP_BIN=$(command -v php 2>/dev/null || true)
+          [ -z "$PHP_BIN" ] && [ -x /usr/bin/php8.3 ] && PHP_BIN=/usr/bin/php8.3
+          [ -z "$PHP_BIN" ] && [ -x /usr/bin/php8.1 ] && PHP_BIN=/usr/bin/php8.1
+          [ -z "$PHP_BIN" ] && [ -x /usr/bin/php ] && PHP_BIN=/usr/bin/php
+          if [ -z "$PHP_BIN" ]; then
+            echo "ERROR: PHP not found. Ensure EC2 was provisioned with Terraform user_data (installs php8.3)."
+            exit 1
+          fi
+
+          # Use Composer: system (from Terraform user_data) or composer.phar copied from runner
+          if command -v composer >/dev/null 2>&1; then
+            COMPOSER_CMD=composer
+          elif [ -f composer.phar ]; then
+            COMPOSER_CMD="$PHP_BIN composer.phar"
+          else
+            echo "ERROR: Composer not found and composer.phar was not copied."
+            exit 1
+          fi
+
+          # .env: create from example if needed, then apply secrets (DB_CONNECTION=mysql required on server; Laravel defaults to sqlite otherwise)
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+          grep -q '^DB_CONNECTION=' .env && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env || echo 'DB_CONNECTION=mysql' >> .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=localhost/' .env
+          sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env
+          sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_DATABASE:-byu_590r_app}/" .env
+          sed -i "s/^DB_USERNAME=.*/DB_USERNAME=${DB_USERNAME:-byu_user}/" .env
+          sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD:-byu_password}/" .env
+          sed -i 's/^APP_ENV=.*/APP_ENV=production/' .env
+
+          # Install PHP dependencies; if lock file targets PHP 8.4 (Symfony 8) but server has 8.3, run update
+          set +e
+          $COMPOSER_CMD install --no-interaction --no-scripts --prefer-dist --no-dev --optimize-autoloader
+          EXIT=$?
+          set -e
+          if [ $EXIT -ne 0 ]; then
+            $COMPOSER_CMD update --no-interaction --no-scripts --prefer-dist --no-dev --optimize-autoloader
+          fi
+
+          $PHP_BIN artisan key:generate --force 2>/dev/null || true
+          $PHP_BIN artisan config:clear
+          sudo mkdir -p storage/framework/{cache,sessions,views} storage/logs storage/app bootstrap/cache
+          sudo chown -R ubuntu:www-data /var/www/html/api
+          sudo chmod -R 775 storage bootstrap/cache
+          echo "Backend deps and dirs done."
+          REMOTE
+
+      - name: Inject backend .env secrets
         run: |
-          # Build Angular app locally using make
-          make build-frontend-prod
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "cd /var/www/html/api && \
+            (grep -q '^DB_DATABASE=' .env && sed -i 's/^DB_DATABASE=.*/DB_DATABASE=${{ secrets.DB_DATABASE }}/' .env || echo 'DB_DATABASE=${{ secrets.DB_DATABASE }}' >> .env); \
+            (grep -q '^DB_USERNAME=' .env && sed -i 's/^DB_USERNAME=.*/DB_USERNAME=${{ secrets.DB_USERNAME }}/' .env || echo 'DB_USERNAME=${{ secrets.DB_USERNAME }}' >> .env); \
+            (grep -q '^DB_PASSWORD=' .env && sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/' .env || echo 'DB_PASSWORD=${{ secrets.DB_PASSWORD }}' >> .env); \
+            (grep -q '^S3_BUCKET=' .env && sed -i 's|^S3_BUCKET=.*|S3_BUCKET=${{ secrets.S3_BUCKET }}|' .env || echo 'S3_BUCKET=${{ secrets.S3_BUCKET }}' >> .env); \
+            (grep -q '^AWS_ACCESS_KEY_ID=' .env && sed -i 's/^AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}/' .env || echo 'AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}' >> .env); \
+            (grep -q '^AWS_SECRET_ACCESS_KEY=' .env && sed -i 's/^AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}/' .env || echo 'AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}' >> .env); \
+            (grep -q '^AWS_DEFAULT_REGION=' .env && sed -i 's/^AWS_DEFAULT_REGION=.*/AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}/' .env || echo 'AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}' >> .env); \
+            ([ -z '${{ secrets.APP_DEBUG }}' ] || (grep -q '^APP_DEBUG=' .env && sed -i 's/^APP_DEBUG=.*/APP_DEBUG=${{ secrets.APP_DEBUG }}/' .env || echo 'APP_DEBUG=${{ secrets.APP_DEBUG }}' >> .env)); \
+            ([ -z '${{ secrets.OPENAI_API_KEY }}' ] || (grep -q '^OPENAI_API_KEY=' .env && sed -i 's|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}|' .env || echo 'OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}' >> .env)); \
+            true"
 
-          # Create app directory and set permissions
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            sudo mkdir -p /var/www/html/app
-            sudo chown -R ubuntu:ubuntu /var/www/html/app
-          EOF
+      - name: Migrate and restart backend
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "export PATH=/usr/bin:/usr/local/bin:\$PATH && cd /var/www/html/api && php artisan migrate --force && php artisan migrate --seed --force 2>/dev/null || true && sudo systemctl restart apache2"
 
-          # Copy built files to EC2
+      - name: Deploy frontend
+        run: |
+          # Inject Terraform-generated EC2 host into production environment (from GitHub secret EC2_HOST)
+          sed -i "s|__EC2_HOST__|${{ secrets.EC2_HOST }}|g" web-app/src/environments/environment.prod.ts
+          cd web-app
+          npm install
+          npm run build
+
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo mkdir -p /var/www/html/app && sudo chown -R ubuntu:ubuntu /var/www/html/app"
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" \
-            web-app/dist/byu-590r-builder/ ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/app/
+            dist/byu-590r-builder/ ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/app/
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo chown -R www-data:www-data /var/www/html/app && sudo systemctl reload apache2"
 
-          # Set proper permissions and restart Apache
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            sudo chown -R www-data:www-data /var/www/html/app
-            sudo chmod -R 755 /var/www/html/app
-            sudo systemctl reload apache2
-          EOF
-
-      - name: Verify Deployment
+      - name: Verify
         run: |
-          # Wait a moment for services to start
-          sleep 10
-
-          # Check if services are running
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            echo "=== Apache Status ==="
-            sudo systemctl status apache2 --no-pager || true
-            
-            echo ""
-            echo "=== Apache Virtual Hosts ==="
-            sudo apache2ctl -S 2>/dev/null | grep -E "(443|4444|80)" || true
-            
-            echo ""
-            echo "=== Apache Listening Ports ==="
-            sudo netstat -tlnp | grep apache2 || sudo ss -tlnp | grep apache2 || echo "Could not check listening ports"
-            
-            echo ""
-            echo "=== MySQL Status ==="
-            sudo systemctl status mysql --no-pager || true
-            
-            echo ""
-            echo "=== Laravel API Test (localhost) ==="
-            curl -v http://localhost:4444/api/hello 2>&1 | head -20 || echo "API endpoint not responding on localhost"
-            
-            echo ""
-            echo "=== Laravel API Test (public IP) ==="
-            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "unknown")
-            echo "Public IP: $PUBLIC_IP"
-            curl -v http://$PUBLIC_IP:4444/api/hello 2>&1 | head -20 || echo "API endpoint not responding on public IP"
-            
-            echo ""
-            echo "=== Apache Backend Error Log (last 30 lines) ==="
-            sudo tail -30 /var/log/apache2/byu590r_backend_error.log 2>/dev/null || sudo tail -30 /var/log/apache2/error.log 2>/dev/null || echo "No error log found"
-            
-            echo ""
-            echo "=== Frontend Test ==="
-            curl -f http://localhost/ || echo "Frontend not responding"
-          EOF
+          sleep 5
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "curl -s -o /dev/null -w '%{http_code}' http://localhost/ && echo ' Frontend' && curl -s -o /dev/null -w '%{http_code}' http://localhost:4444/api/hello && echo ' Backend'"
 
   test-deployment:
-    name: Post-Deploy Tests
+    name: Post-deploy tests
     needs: [deploy-to-ec2]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "18.20.8"
-
-      - name: Install Playwright and dependencies
-        run: |
-          npm install -D @playwright/test @types/node
-          npx playwright install --with-deps chromium
-
-      - name: Create test results directory
-        run: |
-          mkdir -p test-results
-
-      - name: Run Playwright tests against production
+          node-version: "18"
+      - run: npm install -D @playwright/test @types/node && npx playwright install --with-deps chromium
+      - name: Run Playwright
         env:
           BACKEND_URL: http://${{ secrets.EC2_HOST }}:4444
           FRONTEND_URL: http://${{ secrets.EC2_HOST }}
-        run: |
-          npx playwright test --reporter=list,html
-
-      - name: Upload Playwright test results
+        run: npx playwright test --reporter=list,html
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 30
-
-      - name: Upload test screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-screenshots
-          path: test-results/
-          retention-days: 30
+          retention-days: 7
 
   deploy-complete:
-    name: Deploy Complete
+    name: Done
     needs: [test-deployment]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-
     steps:
-      - name: Comment deployment success
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Only comment on pull requests, not on direct pushes to main
-            if (context.payload.pull_request) {
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `🚀 **EC2 Deployment Successful!**\n\n✅ **Frontend**: Deployed to EC2 (Apache)\n🔗 **Frontend URL**: http://${{ secrets.EC2_HOST }}\n\n✅ **Backend**: Deployed to EC2 (Apache)\n🔗 **Backend API**: http://${{ secrets.EC2_HOST }}:4444/api/hello\n\n🎉 Your BYU 590R Monorepo is now running on EC2 with Apache!`
-              });
-            } else {
-              // For direct pushes to main, create a deployment status
-              console.log('🚀 EC2 Deployment Successful!');
-              console.log('✅ Frontend: Deployed to EC2 (Apache)');
-              console.log(`🔗 Frontend URL: http://${{ secrets.EC2_HOST }}`);
-              console.log('✅ Backend: Deployed to EC2 (Apache)');
-              console.log(`🔗 Backend API: http://${{ secrets.EC2_HOST }}:4444/api/hello`);
-              console.log('🎉 Your BYU 590R Monorepo is now running on EC2 with Apache!');
-            }
+      - run: |
+          echo "Frontend http://${{ secrets.EC2_HOST }}"
+          echo "Backend  http://${{ secrets.EC2_HOST }}:4444/api/hello"
