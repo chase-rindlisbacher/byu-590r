@@ -108,7 +108,7 @@ test.describe("Deployment Verification", () => {
 	}: {
 		request: APIRequestContext;
 	}) => {
-		// Test that login endpoint exists and responds (even if credentials are wrong)
+		// Test that login endpoint exists and responds (even if credentials are wrong) 
 		const response = await request.post(`${BACKEND_URL}/api/login`, {
 			data: {
 				email: "test@example.com",
