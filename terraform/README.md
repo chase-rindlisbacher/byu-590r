@@ -1,5 +1,5 @@
 # BYU 590R Monorepo - Terraform Infrastructure
-# Hello
+
 This Terraform configuration replicates the functionality of `devops/bash/setup-ec2-server.sh`.
 
 ## What This Creates
