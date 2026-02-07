@@ -7,7 +7,7 @@ Laravel backend + Angular frontend with AWS EC2 deployment.
 - AWS subscription required
 - GitHub Teams subscription recommended for full functionality
 
-**Local Development Requirements:** 
+**Local Development Requirements:**
 
 - Docker & Docker Compose
 - Node.js 18+ (for Angular development)
