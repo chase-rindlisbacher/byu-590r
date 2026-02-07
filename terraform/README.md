@@ -34,7 +34,7 @@ This Terraform configuration replicates the functionality of `devops/bash/setup-
    # macOS
    brew install terraform
 
-   # Or download from https://www.terraform.io/downloads
+   # Or download from https://www.terraform.io/downloads 
    ```
 
 2. **AWS CLI**: Configured with appropriate credentials
