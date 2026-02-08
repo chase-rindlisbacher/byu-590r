@@ -103,7 +103,7 @@ test.describe("Deployment Verification", () => {
 		expect(body.timestamp).toBeTruthy();
 	});
 
-	test("Backend API login endpoint should accept POST requests", async ({
+	test("Backend API login endpoint should accept POST requests", async ({ 
 		request,
 	}: {
 		request: APIRequestContext;
