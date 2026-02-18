@@ -31,16 +31,16 @@
       </form>
     </mat-card-content>
     <mat-card-actions class="button-group">
-      <button mat-raised-button color="primary" type="submit" [disabled]="!loginForm.valid || isLoading()" (click)="submitLogin()">
+      <button mat-raised-button class="action-button" style="color: white;" type="submit" [disabled]="!loginForm.valid || isLoading()" (click)="submitLogin()">
         @if (isLoading()) {
           <mat-spinner diameter="20"></mat-spinner>
           <span>Loading...</span>
         } @else {
-          <span>Login Here</span>
+          <span style="color: black;">Login</span>
         }
       </button>
-      <button mat-button (click)="passwordResetDialog.set(true)">Forgot Password</button>
-      <button mat-button (click)="registerDialog.set(true)">Register</button>
+      <button mat-raised-button class="action-button" style="color: black;" (click)="passwordResetDialog.set(true)">Forgot Password</button>
+      <button mat-raised-button class="action-button" style="color: black;" (click)="registerDialog.set(true)">Register</button>
     </mat-card-actions>
   </mat-card>
 

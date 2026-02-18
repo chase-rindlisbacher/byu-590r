@@ -6,6 +6,10 @@
   min-height: 100vh;
   background-color: colors.$colors-background;
   color: colors.$colors-text-primary;
+  background-image: url('https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnQ2OWVpcTl0N3h3NXBzdnF3eHdxcDljcWc0cGYxbHFmaHBrNThiZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/4Cpgf1zzMMy4w/giphy.gif');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   @include fonts.fonts-body;
 }
 
