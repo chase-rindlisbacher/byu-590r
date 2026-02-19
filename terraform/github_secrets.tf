@@ -6,7 +6,7 @@ provider "github" {
   token = var.github_token
 }
 
-resource "github_actions_secret" "ec2_host" {
+resource "github_actions_secret" "ec2_host" { 
   count = var.manage_github_secrets ? 1 : 0
 
   repository      = var.github_repository
