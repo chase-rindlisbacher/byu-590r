@@ -2,7 +2,7 @@
 
 This Terraform configuration replicates the functionality of `devops/bash/setup-ec2-server.sh`.
 
-## What This Creates
+## What This Creates 
 
 - **Security Group**: `byu-590r-sg` with ingress rules for:
   - SSH (port 22)
