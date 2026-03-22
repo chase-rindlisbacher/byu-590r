@@ -28,7 +28,7 @@ jobs:
       - name: Run tests
         run: |
           cd web-app
-          npm run test -- --watch=false --browsers=ChromeHeadless
+          npm run test:ci
 
       - name: Build
         run: |

@@ -1,0 +1,162 @@
+@use "../../assets/styles/colors" as colors;
+@use "../../assets/styles/spacing" as spacing;
+@use "../../assets/styles/fonts" as fonts;
+
+.memories-container {
+  padding: spacing.$spacing-large;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: spacing.$spacing-medium;
+  padding: spacing.$spacing-large;
+
+  p {
+    @include fonts.fonts-body;
+    color: colors.$colors-text-secondary;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: spacing.$spacing-small;
+  padding: spacing.$spacing-large;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    color: colors.$colors-text-secondary;
+    opacity: 0.5;
+  }
+
+  h3 {
+    @include fonts.fonts-h3;
+    color: colors.$colors-text-primary;
+    margin: 0;
+  }
+
+  p {
+    @include fonts.fonts-body;
+    color: colors.$colors-text-secondary;
+    margin: 0;
+  }
+}
+
+.memories-list {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-medium;
+}
+
+.memory-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease-in-out;
+
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+}
+
+mat-card-header {
+  flex-shrink: 0;
+  padding: spacing.$spacing-small spacing.$spacing-medium;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: spacing.$spacing-small;
+  min-height: 60px;
+}
+
+.memory-date {
+  flex: 1;
+  min-width: 0;
+  @include fonts.fonts-h3;
+}
+
+.memory-location {
+  display: flex;
+  align-items: center;
+  gap: spacing.$spacing-extra-small;
+  @include fonts.fonts-caption;
+  color: colors.$colors-text-secondary;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+mat-card-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: spacing.$spacing-small spacing.$spacing-medium;
+  min-height: 0;
+  margin-bottom: 0;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: colors.$colors-light-grey;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: colors.$colors-medium-grey;
+    border-radius: 3px;
+
+    &:hover {
+      background: colors.$colors-dark-grey;
+    }
+  }
+}
+
+.memory-journal {
+  margin-bottom: spacing.$spacing-medium;
+  @include fonts.fonts-body;
+  color: colors.$colors-text-primary;
+  line-height: fonts.$line-height-normal;
+  white-space: pre-wrap;
+}
+
+.memory-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: spacing.$spacing-small;
+}
+
+.memory-image {
+  max-width: 100%;
+  height: auto;
+  max-height: 300px;
+  width: auto;
+  object-fit: contain;
+  border-radius: spacing.$border-radius-small;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+::ng-deep {
+  .mat-mdc-card {
+    background-color: colors.$colors-surface !important;
+    color: colors.$colors-text-primary !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .mat-mdc-card-title {
+    color: colors.$colors-text-primary !important;
+  }
+}

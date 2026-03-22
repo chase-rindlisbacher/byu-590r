@@ -1,0 +1,44 @@
+<div class="memories-container">
+  @if (isLoading()) {
+  <div class="loading-state">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading memories...</p>
+  </div>
+  } @else if (memories().length === 0) {
+  <div class="empty-state">
+    <mat-icon class="empty-icon">photo_library</mat-icon>
+    <h3>No memories yet</h3>
+    <p>Your journal entries will appear here.</p>
+  </div>
+  } @else {
+  <div class="memories-list">
+    @for (memory of memories(); track memory.id) {
+    <mat-card class="memory-card">
+        <mat-card-header>
+          <mat-card-title class="memory-date">{{
+            formatDate(memory)
+          }}</mat-card-title>
+          <span class="memory-location">
+            <mat-icon>place</mat-icon>
+            {{ locationName(memory) }}
+          </span>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="memory-journal">{{ memory.journal_entry }}</p>
+          @if (memory.media && memory.media.length > 0) {
+          <div class="memory-media">
+            @for (m of memory.media; track m.id) {
+            <img
+              [src]="m.url"
+              alt="Memory media"
+              class="memory-image"
+            />
+            }
+          </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+  }
+</div>
