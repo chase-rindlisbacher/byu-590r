@@ -35,3 +35,6 @@ setup-server.sh
 .env.local
 .env.*.local
 devops/.env
+
+# AI Plan files
+ai/*

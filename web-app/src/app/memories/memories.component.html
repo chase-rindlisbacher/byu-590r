@@ -1,4 +1,13 @@
 <div class="memories-container">
+  @if (!isLoading()) {
+  <div class="buttons-row">
+    <button mat-raised-button color="primary" (click)="openCreateDialog()">
+      <mat-icon>add</mat-icon>
+      Create
+    </button>
+  </div>
+  }
+
   @if (isLoading()) {
   <div class="loading-state">
     <mat-spinner diameter="40"></mat-spinner>
@@ -9,36 +18,469 @@
     <mat-icon class="empty-icon">photo_library</mat-icon>
     <h3>No memories yet</h3>
     <p>Your journal entries will appear here.</p>
+    <button mat-raised-button color="primary" (click)="openCreateDialog()">
+      <mat-icon>add</mat-icon>
+      Create memory
+    </button>
   </div>
   } @else {
   <div class="memories-list">
     @for (memory of memories(); track memory.id) {
     <mat-card class="memory-card">
-        <mat-card-header>
-          <mat-card-title class="memory-date">{{
-            formatDate(memory)
-          }}</mat-card-title>
+      <mat-card-header>
+        <mat-card-title class="memory-date">{{
+          formatDate(memory)
+        }}</mat-card-title>
+        <div class="memory-header-right">
           <span class="memory-location">
             <mat-icon>place</mat-icon>
             {{ locationName(memory) }}
           </span>
+          <div class="memory-actions">
+            <button
+              mat-icon-button
+              type="button"
+              color="primary"
+              (click)="openEditDialog(memory)"
+              aria-label="Edit memory"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              type="button"
+              color="warn"
+              (click)="openDeleteDialog(memory)"
+              aria-label="Delete memory"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="memory-journal">{{ memory.journal_entry }}</p>
+        @if (memory.media && memory.media.length > 0) {
+        <div class="memory-media">
+          @for (m of memory.media; track m.id) {
+          <img [src]="m.url" alt="Memory media" class="memory-image" />
+          }
+        </div>
+        }
+      </mat-card-content>
+    </mat-card>
+    }
+  </div>
+  }
+
+  <!-- Delete confirmation -->
+  @if (deleteMemoryDialog()) {
+  <div class="modal" (click)="closeDeleteDialog()">
+    <div class="modal-dialog" (click)="$event.stopPropagation()">
+      <mat-card class="modal-content">
+        <mat-card-header>
+          <mat-card-title>Delete memory</mat-card-title>
+          <button mat-icon-button type="button" (click)="closeDeleteDialog()">
+            <mat-icon>close</mat-icon>
+          </button>
         </mat-card-header>
         <mat-card-content>
-          <p class="memory-journal">{{ memory.journal_entry }}</p>
-          @if (memory.media && memory.media.length > 0) {
-          <div class="memory-media">
-            @for (m of memory.media; track m.id) {
-            <img
-              [src]="m.url"
-              alt="Memory media"
-              class="memory-image"
-            />
-            }
-          </div>
-          }
+          <p>
+            Are you sure you want to delete this memory? This cannot be undone.
+            Photos stored for this memory will be removed from storage.
+          </p>
         </mat-card-content>
+        <mat-card-actions>
+          <button mat-button type="button" (click)="closeDeleteDialog()">
+            Cancel
+          </button>
+          <button
+            mat-raised-button
+            color="warn"
+            type="button"
+            [disabled]="memoryIsDeleting()"
+            (click)="deleteMemory()"
+          >
+            @if (memoryIsDeleting()) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Deleting...</span>
+            } @else {
+            <span>Delete</span>
+            }
+          </button>
+        </mat-card-actions>
       </mat-card>
-    }
+    </div>
+  </div>
+  }
+
+  <!-- Create memory dialog -->
+  @if (createMemoryDialog()) {
+  <div class="modal" (click)="closeCreateDialog()">
+    <div class="modal-dialog modal-lg" (click)="$event.stopPropagation()">
+      <mat-card class="modal-content">
+        <mat-card-header>
+          <mat-card-title>New memory</mat-card-title>
+          <button mat-icon-button type="button" (click)="closeCreateDialog()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="newMemoryForm">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Journal entry*</mat-label>
+              <textarea
+                matInput
+                rows="4"
+                formControlName="journal_entry"
+              ></textarea>
+              @if (getFieldError(newMemoryForm, 'journal_entry')) {
+              <mat-error>{{
+                getFieldError(newMemoryForm, "journal_entry")
+              }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>When*</mat-label>
+              <input matInput type="datetime-local" formControlName="time" />
+              @if (getFieldError(newMemoryForm, 'time')) {
+              <mat-error>{{ getFieldError(newMemoryForm, "time") }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Location*</mat-label>
+              <mat-select formControlName="location_id">
+                @for (loc of locations(); track loc.id) {
+                <mat-option [value]="loc.id">
+                  {{ loc.name }}, {{ loc.state }}
+                </mat-option>
+                }
+              </mat-select>
+              @if (getFieldError(newMemoryForm, 'location_id')) {
+              <mat-error>{{
+                getFieldError(newMemoryForm, "location_id")
+              }}</mat-error>
+              }
+            </mat-form-field>
+            <div class="form-group">
+              @if (!showNewLocationInCreate()) {
+              <button
+                mat-button
+                type="button"
+                (click)="showNewLocationInCreate.set(true)"
+              >
+                Add new location
+              </button>
+              } @else {
+              <p class="subsection-title">New location</p>
+              <div [formGroup]="newLocationForm" class="new-location-grid">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Name*</mat-label>
+                  <input matInput formControlName="name" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>State*</mat-label>
+                  <input matInput formControlName="state" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Street</mat-label>
+                  <input matInput formControlName="street" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>City</mat-label>
+                  <input matInput formControlName="city" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Zip</mat-label>
+                  <input matInput formControlName="zipcode" />
+                </mat-form-field>
+                <div class="new-location-actions">
+                  <button
+                    mat-raised-button
+                    color="accent"
+                    type="button"
+                    [disabled]="
+                      !newLocationForm.valid || locationIsSaving()
+                    "
+                    (click)="saveNewLocation('create')"
+                  >
+                    Save location
+                  </button>
+                  <button
+                    mat-button
+                    type="button"
+                    (click)="showNewLocationInCreate.set(false)"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+              }
+            </div>
+            <div class="form-group">
+              <label class="file-input-label">Cover image (required)</label>
+              <p class="field-hint">
+                Image files only. This becomes the memory’s primary cover photo.
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                (change)="onCreateCoverChange($event)"
+                class="file-input"
+              />
+            </div>
+            <div class="form-group">
+              <label class="file-input-label">More photos (optional)</label>
+              <p class="field-hint">
+                Add extra images in one go (multi-select). They are stored in
+                addition to the required cover image.
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                (change)="onCreateAdditionalFilesChange($event)"
+                class="file-input"
+              />
+              @if (selectedAdditionalFiles().length > 0) {
+              <p class="file-count">
+                {{ selectedAdditionalFiles().length }} file(s) selected
+              </p>
+              }
+            </div>
+            <small>* Required fields</small>
+            @if (createErrorMessage()) {
+            <mat-card class="alert alert-danger">{{
+              createErrorMessage()
+            }}</mat-card>
+            }
+          </form>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-button type="button" (click)="closeCreateDialog()">
+            Close
+          </button>
+          <button
+            mat-raised-button
+            color="primary"
+            type="button"
+            [disabled]="
+              !newMemoryForm.valid || !selectedCoverFile() || memoryIsCreating()
+            "
+            (click)="createMemory()"
+          >
+            @if (memoryIsCreating()) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Saving...</span>
+            } @else {
+            <span>Save</span>
+            }
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
+  }
+
+  <!-- Edit memory dialog -->
+  @if (editMemoryDialog()) {
+  <div class="modal" (click)="closeEditDialog()">
+    <div class="modal-dialog modal-lg" (click)="$event.stopPropagation()">
+      <mat-card class="modal-content">
+        <mat-card-header>
+          <mat-card-title>Edit memory</mat-card-title>
+          <button mat-icon-button type="button" (click)="closeEditDialog()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="editMemoryForm">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Journal entry*</mat-label>
+              <textarea
+                matInput
+                rows="4"
+                formControlName="journal_entry"
+              ></textarea>
+              @if (getFieldError(editMemoryForm, 'journal_entry')) {
+              <mat-error>{{
+                getFieldError(editMemoryForm, "journal_entry")
+              }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>When*</mat-label>
+              <input matInput type="datetime-local" formControlName="time" />
+              @if (getFieldError(editMemoryForm, 'time')) {
+              <mat-error>{{ getFieldError(editMemoryForm, "time") }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Location*</mat-label>
+              <mat-select formControlName="location_id">
+                @for (loc of locations(); track loc.id) {
+                <mat-option [value]="loc.id">
+                  {{ loc.name }}, {{ loc.state }}
+                </mat-option>
+                }
+              </mat-select>
+              @if (getFieldError(editMemoryForm, 'location_id')) {
+              <mat-error>{{
+                getFieldError(editMemoryForm, "location_id")
+              }}</mat-error>
+              }
+            </mat-form-field>
+            <div class="form-group">
+              @if (!showNewLocationInEdit()) {
+              <button
+                mat-button
+                type="button"
+                (click)="showNewLocationInEdit.set(true)"
+              >
+                Add new location
+              </button>
+              } @else {
+              <p class="subsection-title">New location</p>
+              <div [formGroup]="newLocationForm" class="new-location-grid">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Name*</mat-label>
+                  <input matInput formControlName="name" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>State*</mat-label>
+                  <input matInput formControlName="state" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Street</mat-label>
+                  <input matInput formControlName="street" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>City</mat-label>
+                  <input matInput formControlName="city" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Zip</mat-label>
+                  <input matInput formControlName="zipcode" />
+                </mat-form-field>
+                <div class="new-location-actions">
+                  <button
+                    mat-raised-button
+                    color="accent"
+                    type="button"
+                    [disabled]="
+                      !newLocationForm.valid || locationIsSaving()
+                    "
+                    (click)="saveNewLocation('edit')"
+                  >
+                    Save location
+                  </button>
+                  <button
+                    mat-button
+                    type="button"
+                    (click)="showNewLocationInEdit.set(false)"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+              }
+            </div>
+            <div class="form-group">
+              <p class="subsection-title">Attached photos</p>
+              @if (editMediaSorted().length === 0) {
+              <p class="field-hint">No photos attached yet.</p>
+              } @else {
+              <div class="media-grid-edit">
+                @for (m of editMediaSorted(); track m.id) {
+                <div class="media-tile">
+                  <img [src]="m.url" alt="" class="media-thumb" />
+                  @if (isPrimaryMediaItem(m)) {
+                  <span class="cover-badge">Cover</span>
+                  }
+                  <button
+                    mat-icon-button
+                    type="button"
+                    class="remove-media-btn"
+                    (click)="detachMedia(m.id)"
+                    [disabled]="detachingMediaId() === m.id"
+                    aria-label="Remove photo"
+                  >
+                    @if (detachingMediaId() === m.id) {
+                    <mat-spinner diameter="22"></mat-spinner>
+                    } @else {
+                    <mat-icon>close</mat-icon>
+                    }
+                  </button>
+                </div>
+                }
+              </div>
+              }
+            </div>
+            <div class="form-group">
+              <label class="file-input-label">Add more photos (optional)</label>
+              <p class="field-hint">
+                Select one or more images. They upload after you save (same as
+                replacing the cover below).
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                (change)="onEditAdditionalFilesChange($event)"
+                class="file-input"
+              />
+              @if (selectedEditAdditionalFiles().length > 0) {
+              <p class="file-count">
+                {{ selectedEditAdditionalFiles().length }} new file(s) will be
+                added on Save
+              </p>
+              }
+            </div>
+            <div class="form-group">
+              <label class="file-input-label"
+                >Replace primary cover image (optional)</label
+              >
+              <p class="field-hint">
+                Replaces only the cover (lowest photo id); other attachments stay
+                unless you remove them above. Old cover file is removed from
+                storage. Images only (not video).
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                (change)="onEditCoverChange($event)"
+                class="file-input"
+              />
+            </div>
+            <small>* Required fields</small>
+            @if (editErrorMessage()) {
+            <mat-card class="alert alert-danger">{{
+              editErrorMessage()
+            }}</mat-card>
+            }
+          </form>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-button type="button" (click)="closeEditDialog()">
+            Close
+          </button>
+          <button
+            mat-raised-button
+            color="primary"
+            type="button"
+            [disabled]="!editMemoryForm.valid || memoryIsUpdating()"
+            (click)="updateMemory()"
+          >
+            @if (memoryIsUpdating()) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Saving...</span>
+            } @else {
+            <span>Save</span>
+            }
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
   </div>
   }
 </div>

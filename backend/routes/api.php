@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\BookController;
 use App\Http\Controllers\Api\HelloWorldController;
+use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MemoryController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\UserController;
@@ -34,7 +35,13 @@ Route::middleware(\App\Http\Middleware\AuthenticateApi::class)->group(function (
     });
 
     Route::resource('books', BookController::class);
+    Route::get('locations', [LocationController::class, 'index']);
+    Route::post('locations', [LocationController::class, 'store']);
     Route::resource('memories', MemoryController::class);
+    // PHP does not populate multipart file uploads on PUT; use POST for multipart updates.
+    Route::post('memories/{id}', [MemoryController::class, 'update'])->whereNumber('id');
+    Route::post('memories/{id}/media', [MemoryController::class, 'addMedia'])->whereNumber('id');
+    Route::delete('media/{media}', [MemoryController::class, 'destroyMedia'])->whereNumber('media');
     Route::controller(BookController::class)->group(function () {
         Route::post('books/{id}/checkout', 'checkoutBook');
         Route::patch('books/{id}/return', 'returnBook');

@@ -2,7 +2,19 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { MemoriesComponent } from './memories.component';
 import { MemoryService, Memory } from '../core/services/memory.service';
+import { LocationService } from '../core/services/location.service';
 import { MemoryStore } from '../core/stores/memory.store';
+
+const mockLocations = [
+  {
+    id: 1,
+    name: 'Provo',
+    street: null,
+    city: null,
+    state: 'Utah',
+    zipcode: null,
+  },
+];
 
 const mockMemories: Memory[] = [
   {
@@ -41,6 +53,7 @@ const mockMemories: Memory[] = [
 
 describe('MemoriesComponent', () => {
   let mockMemoryService: jasmine.SpyObj<MemoryService>;
+  let mockLocationService: jasmine.SpyObj<LocationService>;
 
   beforeEach(async () => {
     mockMemoryService = jasmine.createSpyObj('MemoryService', ['getMemories']);
@@ -48,10 +61,18 @@ describe('MemoriesComponent', () => {
       of({ success: true, results: mockMemories, message: 'Memories' })
     );
 
+    mockLocationService = jasmine.createSpyObj('LocationService', [
+      'listLocations',
+    ]);
+    mockLocationService.listLocations.and.returnValue(
+      of({ success: true, results: mockLocations, message: 'Locations' })
+    );
+
     await TestBed.configureTestingModule({
       imports: [MemoriesComponent],
       providers: [
         { provide: MemoryService, useValue: mockMemoryService },
+        { provide: LocationService, useValue: mockLocationService },
         MemoryStore,
       ],
     }).compileComponents();
@@ -67,6 +88,12 @@ describe('MemoriesComponent', () => {
     const fixture = TestBed.createComponent(MemoriesComponent);
     fixture.detectChanges();
     expect(mockMemoryService.getMemories).toHaveBeenCalled();
+  });
+
+  it('should load locations on init', () => {
+    const fixture = TestBed.createComponent(MemoriesComponent);
+    fixture.detectChanges();
+    expect(mockLocationService.listLocations).toHaveBeenCalled();
   });
 
   it('should display memories in the list after getMemories resolves', async () => {

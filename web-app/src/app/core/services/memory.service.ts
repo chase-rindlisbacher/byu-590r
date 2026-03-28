@@ -29,6 +29,12 @@ export interface Memory {
   media?: Media[];
 }
 
+export interface CreateMemoryPayload {
+  journal_entry: string;
+  time: string;
+  location_id: number;
+}
+
 export interface MemoryApiResponse {
   success: boolean;
   results: Memory | Memory[];
@@ -36,7 +42,7 @@ export interface MemoryApiResponse {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class MemoryService {
   private http = inject(HttpClient);
@@ -51,40 +57,126 @@ export class MemoryService {
     return {};
   }
 
-  getMemories(): Observable<{ success: boolean; results: Memory[]; message: string }> {
-    return this.http.get<{ success: boolean; results: Memory[]; message: string }>(
-      `${this.apiUrl}memories`,
-      { headers: this.getAuthHeaders() }
-    );
+  getMemories(): Observable<{
+    success: boolean;
+    results: Memory[];
+    message: string;
+  }> {
+    return this.http.get<{
+      success: boolean;
+      results: Memory[];
+      message: string;
+    }>(`${this.apiUrl}memories`, { headers: this.getAuthHeaders() });
   }
 
-  getMemory(id: number): Observable<{ success: boolean; results: Memory; message: string }> {
+  getMemory(
+    id: number
+  ): Observable<{ success: boolean; results: Memory; message: string }> {
     return this.http.get<{ success: boolean; results: Memory; message: string }>(
       `${this.apiUrl}memories/${id}`,
       { headers: this.getAuthHeaders() }
     );
   }
 
-  createMemory(data: Partial<Memory>): Observable<{ success: boolean; results: Memory; message: string }> {
+  /**
+   * Multipart POST — required cover `file`, optional extra `files[]` images.
+   */
+  createMemory(
+    payload: CreateMemoryPayload,
+    coverFile: File,
+    additionalFiles?: File[]
+  ): Observable<{ success: boolean; results: Memory; message: string }> {
+    const formData = new FormData();
+    formData.append('journal_entry', payload.journal_entry);
+    formData.append('time', payload.time);
+    formData.append('location_id', String(payload.location_id));
+    formData.append('file', coverFile, coverFile.name);
+    if (additionalFiles?.length) {
+      for (const f of additionalFiles) {
+        formData.append('files[]', f, f.name);
+      }
+    }
+
     return this.http.post<{ success: boolean; results: Memory; message: string }>(
       `${this.apiUrl}memories`,
-      data,
+      formData,
       { headers: this.getAuthHeaders() }
     );
   }
 
-  updateMemory(id: number, data: Partial<Memory>): Observable<{ success: boolean; results: Memory; message: string }> {
+  /**
+   * Append more images to an existing memory (multipart `files[]`).
+   */
+  addMemoryMedia(
+    memoryId: number,
+    files: File[]
+  ): Observable<{ success: boolean; results: Memory; message: string }> {
+    const formData = new FormData();
+    for (const f of files) {
+      formData.append('files[]', f, f.name);
+    }
+    return this.http.post<{ success: boolean; results: Memory; message: string }>(
+      `${this.apiUrl}memories/${memoryId}/media`,
+      formData,
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  /**
+   * Remove one media row and its storage object; returns updated memory.
+   */
+  deleteMediaItem(
+    mediaId: number
+  ): Observable<{ success: boolean; results: Memory; message: string }> {
+    return this.http.delete<{
+      success: boolean;
+      results: Memory;
+      message: string;
+    }>(`${this.apiUrl}media/${mediaId}`, { headers: this.getAuthHeaders() });
+  }
+
+  /**
+   * PUT when no new file; POST multipart when replacing cover (PHP does not populate files on PUT).
+   */
+  updateMemory(
+    id: number,
+    payload: {
+      journal_entry: string;
+      time: string;
+      location_id: number;
+    },
+    coverFile?: File | null
+  ): Observable<{ success: boolean; results: Memory; message: string }> {
+    const headers = this.getAuthHeaders();
+
+    if (coverFile) {
+      const formData = new FormData();
+      formData.append('journal_entry', payload.journal_entry);
+      formData.append('time', payload.time);
+      formData.append('location_id', String(payload.location_id));
+      formData.append('file', coverFile, coverFile.name);
+
+      return this.http.post<{ success: boolean; results: Memory; message: string }>(
+        `${this.apiUrl}memories/${id}`,
+        formData,
+        { headers }
+      );
+    }
+
     return this.http.put<{ success: boolean; results: Memory; message: string }>(
       `${this.apiUrl}memories/${id}`,
-      data,
-      { headers: this.getAuthHeaders() }
+      payload,
+      { headers }
     );
   }
 
-  deleteMemory(id: number): Observable<{ success: boolean; results: { id: number }; message: string }> {
-    return this.http.delete<{ success: boolean; results: { id: number }; message: string }>(
-      `${this.apiUrl}memories/${id}`,
-      { headers: this.getAuthHeaders() }
-    );
+  deleteMemory(
+    id: number
+  ): Observable<{ success: boolean; results: { id: number }; message: string }> {
+    return this.http.delete<{
+      success: boolean;
+      results: { id: number };
+      message: string;
+    }>(`${this.apiUrl}memories/${id}`, { headers: this.getAuthHeaders() });
   }
 }
