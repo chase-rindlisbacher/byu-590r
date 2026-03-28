@@ -51,7 +51,7 @@ class MemoryController extends BaseController
 
     /**
      * Store a newly created resource in storage.
-     * Multipart: journal_entry, time, location_id, file (required primary image), files[] (optional extra images).
+     * Multipart or JSON: journal_entry, time, location_id; optional file (primary image), files[] (extra images).
      */
     public function store(Request $request)
     {
@@ -59,17 +59,13 @@ class MemoryController extends BaseController
             'journal_entry' => 'required|string',
             'time' => 'required|date',
             'location_id' => 'required|exists:locations,id',
-            'file' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp',
+            'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp',
             'files' => 'nullable|array',
             'files.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp',
         ]);
 
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors(), 422);
-        }
-
-        if (! $request->hasFile('file')) {
-            return $this->sendError('Validation Error.', ['file' => ['A cover image file is required.']], 422);
         }
 
         $user = Auth::user();
@@ -80,17 +76,19 @@ class MemoryController extends BaseController
             'user_id' => $user->id,
         ]);
 
-        $path = $this->storeUploadedImage($request->file('file'));
-        if (! $path) {
-            $memory->delete();
+        if ($request->hasFile('file')) {
+            $path = $this->storeUploadedImage($request->file('file'));
+            if (! $path) {
+                $memory->delete();
 
-            return $this->sendError('Memory cover failed to upload!', [], 500);
+                return $this->sendError('Memory image failed to upload!', [], 500);
+            }
+
+            Media::create([
+                'url' => $path,
+                'memory_id' => $memory->id,
+            ]);
         }
-
-        Media::create([
-            'url' => $path,
-            'memory_id' => $memory->id,
-        ]);
 
         $this->attachAdditionalUploadedFiles($memory, $request->file('files', []));
 

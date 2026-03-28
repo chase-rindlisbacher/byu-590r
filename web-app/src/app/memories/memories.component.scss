@@ -56,13 +56,19 @@
   z-index: 1000;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding: spacing.$spacing-large spacing.$spacing-medium;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .modal-dialog {
   position: relative;
   width: 90%;
   max-width: 500px;
+  flex-shrink: 0;
+  margin-bottom: spacing.$spacing-large;
 
   &.modal-lg {
     max-width: 640px;
@@ -174,6 +180,25 @@
     &:hover {
       background: rgba(180, 0, 0, 0.75);
     }
+  }
+
+  &.media-tile--pending-remove {
+    opacity: 0.55;
+    outline: 2px dashed colors.$colors-error;
+  }
+
+  .pending-remove-badge {
+    position: absolute;
+    left: spacing.$spacing-extra-small;
+    bottom: spacing.$spacing-extra-small;
+    right: spacing.$spacing-extra-small;
+    text-align: center;
+    background: rgba(180, 0, 0, 0.85);
+    color: colors.$colors-white;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    @include fonts.fonts-caption;
   }
 }
 

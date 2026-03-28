@@ -79,18 +79,20 @@ export class MemoryService {
   }
 
   /**
-   * Multipart POST — required cover `file`, optional extra `files[]` images.
+   * Multipart POST — optional primary `file` and extra `files[]` images.
    */
   createMemory(
     payload: CreateMemoryPayload,
-    coverFile: File,
+    coverFile?: File | null,
     additionalFiles?: File[]
   ): Observable<{ success: boolean; results: Memory; message: string }> {
     const formData = new FormData();
     formData.append('journal_entry', payload.journal_entry);
     formData.append('time', payload.time);
     formData.append('location_id', String(payload.location_id));
-    formData.append('file', coverFile, coverFile.name);
+    if (coverFile) {
+      formData.append('file', coverFile, coverFile.name);
+    }
     if (additionalFiles?.length) {
       for (const f of additionalFiles) {
         formData.append('files[]', f, f.name);

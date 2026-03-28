@@ -218,33 +218,24 @@
               }
             </div>
             <div class="form-group">
-              <label class="file-input-label">Cover image (required)</label>
+              <label class="file-input-label">Photos (optional)</label>
               <p class="field-hint">
-                Image files only. This becomes the memory’s primary cover photo.
-              </p>
-              <input
-                type="file"
-                accept="image/*"
-                (change)="onCreateCoverChange($event)"
-                class="file-input"
-              />
-            </div>
-            <div class="form-group">
-              <label class="file-input-label">More photos (optional)</label>
-              <p class="field-hint">
-                Add extra images in one go (multi-select). They are stored in
-                addition to the required cover image.
+                Image files only. Select one or more; the first becomes the cover,
+                and any additional selections are stored with the memory.
               </p>
               <input
                 type="file"
                 accept="image/*"
                 multiple
-                (change)="onCreateAdditionalFilesChange($event)"
+                (change)="onCreatePhotosChange($event)"
                 class="file-input"
               />
-              @if (selectedAdditionalFiles().length > 0) {
+              @if (selectedCoverFile() || selectedAdditionalFiles().length > 0) {
               <p class="file-count">
-                {{ selectedAdditionalFiles().length }} file(s) selected
+                {{
+                  (selectedCoverFile() ? 1 : 0) + selectedAdditionalFiles().length
+                }}
+                image(s) selected
               </p>
               }
             </div>
@@ -264,9 +255,7 @@
             mat-raised-button
             color="primary"
             type="button"
-            [disabled]="
-              !newMemoryForm.valid || !selectedCoverFile() || memoryIsCreating()
-            "
+            [disabled]="!newMemoryForm.valid || memoryIsCreating()"
             (click)="createMemory()"
           >
             @if (memoryIsCreating()) {
@@ -387,29 +376,40 @@
             </div>
             <div class="form-group">
               <p class="subsection-title">Attached photos</p>
+              <p class="field-hint">
+                Click ✕ to mark a photo for removal; it is deleted from storage
+                when you press Save. Click again to undo.
+              </p>
               @if (editMediaSorted().length === 0) {
               <p class="field-hint">No photos attached yet.</p>
               } @else {
               <div class="media-grid-edit">
                 @for (m of editMediaSorted(); track m.id) {
-                <div class="media-tile">
+                <div
+                  class="media-tile"
+                  [class.media-tile--pending-remove]="isPendingMediaRemoval(m.id)"
+                >
                   <img [src]="m.url" alt="" class="media-thumb" />
                   @if (isPrimaryMediaItem(m)) {
                   <span class="cover-badge">Cover</span>
+                  }
+                  @if (isPendingMediaRemoval(m.id)) {
+                  <span class="pending-remove-badge">Remove on save</span>
                   }
                   <button
                     mat-icon-button
                     type="button"
                     class="remove-media-btn"
-                    (click)="detachMedia(m.id)"
-                    [disabled]="detachingMediaId() === m.id"
-                    aria-label="Remove photo"
+                    (click)="togglePendingMediaRemoval(m.id)"
+                    [attr.aria-label]="
+                      isPendingMediaRemoval(m.id)
+                        ? 'Undo remove photo'
+                        : 'Mark photo for removal'
+                    "
                   >
-                    @if (detachingMediaId() === m.id) {
-                    <mat-spinner diameter="22"></mat-spinner>
-                    } @else {
-                    <mat-icon>close</mat-icon>
-                    }
+                    <mat-icon>{{
+                      isPendingMediaRemoval(m.id) ? "undo" : "close"
+                    }}</mat-icon>
                   </button>
                 </div>
                 }
@@ -417,40 +417,30 @@
               }
             </div>
             <div class="form-group">
-              <label class="file-input-label">Add more photos (optional)</label>
+              <label class="file-input-label">Add or replace photos (optional)</label>
               <p class="field-hint">
-                Select one or more images. They upload after you save (same as
-                replacing the cover below).
+                Select one image to add it to the gallery without changing the
+                cover. Select multiple images to replace the cover with the first
+                and add the rest after you save.
               </p>
               <input
                 type="file"
                 accept="image/*"
                 multiple
-                (change)="onEditAdditionalFilesChange($event)"
+                (change)="onEditPhotosChange($event)"
                 class="file-input"
               />
-              @if (selectedEditAdditionalFiles().length > 0) {
+              @if (
+                selectedEditCoverFile() || selectedEditAdditionalFiles().length > 0
+              ) {
               <p class="file-count">
-                {{ selectedEditAdditionalFiles().length }} new file(s) will be
-                added on Save
+                {{
+                  (selectedEditCoverFile() ? 1 : 0) +
+                    selectedEditAdditionalFiles().length
+                }}
+                new file(s) will upload on Save
               </p>
               }
-            </div>
-            <div class="form-group">
-              <label class="file-input-label"
-                >Replace primary cover image (optional)</label
-              >
-              <p class="field-hint">
-                Replaces only the cover (lowest photo id); other attachments stay
-                unless you remove them above. Old cover file is removed from
-                storage. Images only (not video).
-              </p>
-              <input
-                type="file"
-                accept="image/*"
-                (change)="onEditCoverChange($event)"
-                class="file-input"
-              />
             </div>
             <small>* Required fields</small>
             @if (editErrorMessage()) {

@@ -93,7 +93,8 @@ export class MemoriesComponent implements OnInit {
   selectedAdditionalFiles = signal<File[]>([]);
   selectedEditCoverFile = signal<File | null>(null);
   selectedEditAdditionalFiles = signal<File[]>([]);
-  detachingMediaId = signal<number | null>(null);
+  /** Media ids to DELETE on Save (staged; not removed from server until then). */
+  pendingMediaRemovalIds = signal<number[]>([]);
 
   showNewLocationInCreate = signal(false);
   showNewLocationInEdit = signal(false);
@@ -200,6 +201,7 @@ export class MemoriesComponent implements OnInit {
   }
 
   openEditDialog(memory: Memory): void {
+    this.pendingMediaRemovalIds.set([]);
     this.selectedEditMemory.set(memory);
     this.editMemoryForm.patchValue({
       journal_entry: memory.journal_entry,
@@ -226,6 +228,7 @@ export class MemoriesComponent implements OnInit {
     this.selectedEditMemory.set(null);
     this.selectedEditCoverFile.set(null);
     this.selectedEditAdditionalFiles.set([]);
+    this.pendingMediaRemovalIds.set([]);
   }
 
   openDeleteDialog(memory: Memory): void {
@@ -238,64 +241,54 @@ export class MemoriesComponent implements OnInit {
     this.selectedDeleteMemory.set(null);
   }
 
-  onCreateCoverChange(event: Event): void {
+  /** First file = cover; remaining = additional (same request as before). */
+  onCreatePhotosChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.selectedCoverFile.set(input.files[0]);
-      this.createErrorMessage.set(null);
-    } else {
+    if (!input.files?.length) {
       this.selectedCoverFile.set(null);
-    }
-  }
-
-  onCreateAdditionalFilesChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.selectedAdditionalFiles.set(Array.from(input.files));
-    } else {
       this.selectedAdditionalFiles.set([]);
+      this.createErrorMessage.set(null);
+      return;
     }
+    const files = Array.from(input.files);
+    this.selectedCoverFile.set(files[0]);
+    this.selectedAdditionalFiles.set(files.slice(1));
+    this.createErrorMessage.set(null);
   }
 
-  onEditCoverChange(event: Event): void {
+  /**
+   * One file: append only (does not replace cover). Two or more: first replaces
+   * cover, the rest are appended after save.
+   */
+  onEditPhotosChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.selectedEditCoverFile.set(input.files[0]);
-    } else {
+    if (!input.files?.length) {
       this.selectedEditCoverFile.set(null);
-    }
-  }
-
-  onEditAdditionalFilesChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.selectedEditAdditionalFiles.set(Array.from(input.files));
-    } else {
       this.selectedEditAdditionalFiles.set([]);
+      return;
+    }
+    const files = Array.from(input.files);
+    if (files.length === 1) {
+      this.selectedEditCoverFile.set(null);
+      this.selectedEditAdditionalFiles.set(files);
+    } else {
+      this.selectedEditCoverFile.set(files[0]);
+      this.selectedEditAdditionalFiles.set(files.slice(1));
     }
   }
 
-  detachMedia(mediaId: number): void {
-    this.detachingMediaId.set(mediaId);
-    this.memoryService.deleteMediaItem(mediaId).subscribe({
-      next: (res) => {
-        this.memoryStore.setMemory(res.results);
-        const sel = this.selectedEditMemory();
-        if (sel && sel.id === res.results.id) {
-          this.selectedEditMemory.set(res.results);
-        }
-        this.detachingMediaId.set(null);
-        this.snackBar.open('Photo removed', 'Dismiss', { duration: 3000 });
-      },
-      error: (err) => {
-        this.detachingMediaId.set(null);
-        this.snackBar.open(
-          err?.error?.message ?? 'Could not remove photo',
-          'Dismiss',
-          { duration: 5000 }
-        );
-      },
+  togglePendingMediaRemoval(mediaId: number): void {
+    this.pendingMediaRemovalIds.update((ids) => {
+      const i = ids.indexOf(mediaId);
+      if (i >= 0) {
+        return ids.filter((id) => id !== mediaId);
+      }
+      return [...ids, mediaId];
     });
+  }
+
+  isPendingMediaRemoval(mediaId: number): boolean {
+    return this.pendingMediaRemovalIds().includes(mediaId);
   }
 
   saveNewLocation(context: 'create' | 'edit'): void {
@@ -340,11 +333,8 @@ export class MemoriesComponent implements OnInit {
   }
 
   createMemory(): void {
-    if (!this.newMemoryForm.valid || !this.selectedCoverFile()) {
+    if (!this.newMemoryForm.valid) {
       this.newMemoryForm.markAllAsTouched();
-      if (!this.selectedCoverFile()) {
-        this.createErrorMessage.set('A cover image is required.');
-      }
       return;
     }
 
@@ -359,10 +349,10 @@ export class MemoriesComponent implements OnInit {
       location_id: raw.location_id,
     };
 
-    const cover = this.selectedCoverFile()!;
+    const cover = this.selectedCoverFile();
     const extra = this.selectedAdditionalFiles();
 
-    this.memoryService.createMemory(payload, cover, extra).subscribe({
+    this.memoryService.createMemory(payload, cover ?? undefined, extra).subscribe({
       next: (response) => {
         this.memoryStore.addMemory(response.results);
         this.finishCreateSuccess();
@@ -417,7 +407,7 @@ export class MemoriesComponent implements OnInit {
             next: (r) => {
               this.memoryStore.setMemory(r.results);
               this.selectedEditMemory.set(r.results);
-              this.finishEditSuccess();
+              this.runPendingMediaDeletes();
             },
             error: (error) => {
               this.editErrorMessage.set(
@@ -433,7 +423,7 @@ export class MemoriesComponent implements OnInit {
             },
           });
         } else {
-          this.finishEditSuccess();
+          this.runPendingMediaDeletes();
         }
       },
       error: (error) => {
@@ -448,6 +438,48 @@ export class MemoriesComponent implements OnInit {
         this.memoryIsUpdating.set(false);
       },
     });
+  }
+
+  /**
+   * After memory fields (and optional new uploads) are saved, DELETE any photos
+   * the user marked for removal, then close the dialog.
+   */
+  private runPendingMediaDeletes(): void {
+    const ids = [...this.pendingMediaRemovalIds()];
+    if (ids.length === 0) {
+      this.finishEditSuccess();
+      return;
+    }
+
+    const runAt = (index: number): void => {
+      if (index >= ids.length) {
+        this.pendingMediaRemovalIds.set([]);
+        this.finishEditSuccess();
+        return;
+      }
+      this.memoryService.deleteMediaItem(ids[index]).subscribe({
+        next: (res) => {
+          this.memoryStore.setMemory(res.results);
+          if (this.selectedEditMemory()?.id === res.results.id) {
+            this.selectedEditMemory.set(res.results);
+          }
+          runAt(index + 1);
+        },
+        error: (err) => {
+          this.editErrorMessage.set(
+            err?.error?.message ?? 'Could not remove one or more photos.'
+          );
+          this.memoryIsUpdating.set(false);
+          this.snackBar.open(
+            this.editErrorMessage() ?? 'Remove failed',
+            'Dismiss',
+            { duration: 6000 }
+          );
+        },
+      });
+    };
+
+    runAt(0);
   }
 
   private finishEditSuccess(): void {
