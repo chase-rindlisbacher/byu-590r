@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -26,6 +27,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import {
   setFormErrors,
   clearFormErrors,
@@ -54,6 +56,7 @@ import { isMobile } from '../core/utils/mobile.utils';
     MatInputModule,
     MatSelectModule,
     MatSnackBarModule,
+    MatCheckboxModule,
   ],
   templateUrl: './memories.component.html',
   styleUrl: './memories.component.scss',
@@ -106,6 +109,27 @@ export class MemoriesComponent implements OnInit {
 
   createErrorMessage = signal<string | null>(null);
   editErrorMessage = signal<string | null>(null);
+
+  /** After save with no photos: offer optional Gemini-generated image. */
+  aiImageOfferMemory = signal<Memory | null>(null);
+  aiImageUseAvatarReference = signal(true);
+  /** Use up to two most recent photos from other memories as extra model context (server-side). */
+  aiImageUseRecentMemoryPhotos = signal(false);
+  memoryIsGeneratingAiImage = signal(false);
+
+  /** True when the user has at least one photo on another memory (enables meaningful recent-photo context). */
+  hasOtherMemoriesWithPhotosForAi = computed(() => {
+    const offerId = this.aiImageOfferMemory()?.id;
+    if (offerId == null) {
+      return false;
+    }
+    return this.memories().some(
+      (m) =>
+        m.id !== offerId &&
+        Array.isArray(m.media) &&
+        m.media.length > 0
+    );
+  });
 
   isMobile = isMobile;
   getFieldError = getFieldError;
@@ -355,7 +379,7 @@ export class MemoriesComponent implements OnInit {
     this.memoryService.createMemory(payload, cover ?? undefined, extra).subscribe({
       next: (response) => {
         this.memoryStore.addMemory(response.results);
-        this.finishCreateSuccess();
+        this.finishCreateSuccess(response.results);
       },
       error: (error) => {
         if (error?.error?.data && typeof error.error.data === 'object') {
@@ -371,10 +395,66 @@ export class MemoriesComponent implements OnInit {
     });
   }
 
-  private finishCreateSuccess(): void {
+  private finishCreateSuccess(memory: Memory): void {
     this.closeCreateDialog();
     this.memoryIsCreating.set(false);
     this.snackBar.open('Memory created', 'Dismiss', { duration: 3000 });
+    this.maybeOfferAiImage(memory);
+  }
+
+  private maybeOfferAiImage(memory: Memory | null | undefined): void {
+    if (!memory?.id) {
+      return;
+    }
+    if (memory.media && memory.media.length > 0) {
+      return;
+    }
+    this.aiImageUseAvatarReference.set(true);
+    this.aiImageUseRecentMemoryPhotos.set(false);
+    this.aiImageOfferMemory.set(memory);
+  }
+
+  dismissAiImageOffer(): void {
+    this.aiImageOfferMemory.set(null);
+  }
+
+  onAiAvatarRefChange(ev: MatCheckboxChange): void {
+    this.aiImageUseAvatarReference.set(ev.checked);
+  }
+
+  onAiRecentMemoryPhotosChange(ev: MatCheckboxChange): void {
+    this.aiImageUseRecentMemoryPhotos.set(ev.checked);
+  }
+
+  confirmAiImageGeneration(): void {
+    const mem = this.aiImageOfferMemory();
+    if (!mem) {
+      return;
+    }
+    this.memoryIsGeneratingAiImage.set(true);
+    this.memoryService
+      .generateMemoryImage(mem.id, {
+        use_avatar_reference: this.aiImageUseAvatarReference(),
+        use_recent_memory_photos: this.aiImageUseRecentMemoryPhotos(),
+      })
+      .subscribe({
+        next: (res) => {
+          this.memoryStore.setMemory(res.results);
+          this.memoryIsGeneratingAiImage.set(false);
+          this.aiImageOfferMemory.set(null);
+          this.snackBar.open('AI image added to your memory', 'Dismiss', {
+            duration: 4000,
+          });
+        },
+        error: (err: HttpErrorResponse) => {
+          this.memoryIsGeneratingAiImage.set(false);
+          const body = err.error as { message?: string } | undefined;
+          const msg =
+            body?.message ??
+            'Could not generate an image. You can try again from edit later.';
+          this.snackBar.open(msg, 'Dismiss', { duration: 8000 });
+        },
+      });
   }
 
   updateMemory(): void {
@@ -483,12 +563,14 @@ export class MemoriesComponent implements OnInit {
   }
 
   private finishEditSuccess(): void {
+    const memory = this.selectedEditMemory();
     this.editErrorMessage.set(null);
     this.selectedEditAdditionalFiles.set([]);
     this.selectedEditCoverFile.set(null);
     this.closeEditDialog();
     this.memoryIsUpdating.set(false);
     this.snackBar.open('Memory updated', 'Dismiss', { duration: 3000 });
+    this.maybeOfferAiImage(memory ?? undefined);
   }
 
   deleteMemory(): void {

@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'gemini' => [
+        'enabled' => env('MEMORY_AI_IMAGE_ENABLED', true),
+        // Google AI Studio often labels this "API key"; set GEMINI_API_KEY in backend/.env
+        'api_key' => env('GEMINI_API_KEY') ?: env('GOOGLE_GEMINI_API_KEY'),
+        // Use a model that supports native image output on generativelanguage.googleapis.com
+        // (see https://ai.google.dev/gemini-api/docs/image-generation ). Preview IDs may be retired.
+        'model' => env('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
+        'timeout' => (int) env('GEMINI_HTTP_TIMEOUT', 120),
+    ],
+
 ];

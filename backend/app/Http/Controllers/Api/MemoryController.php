@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Media;
 use App\Models\Memory;
+use App\Services\GeminiMemoryImageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Validator;
 
 class MemoryController extends BaseController
 {
+    public function __construct(
+        private readonly GeminiMemoryImageService $geminiMemoryImageService
+    ) {}
+
     /**
      * Primary/cover media: the Media row with the lowest id for this memory.
      * Optional `file` on update replaces that row’s storage object in place.
@@ -87,6 +92,7 @@ class MemoryController extends BaseController
             Media::create([
                 'url' => $path,
                 'memory_id' => $memory->id,
+                'is_ai_generated' => false,
             ]);
         }
 
@@ -131,6 +137,7 @@ class MemoryController extends BaseController
                     Media::create([
                         'url' => $storedPath,
                         'memory_id' => $memory->id,
+                        'is_ai_generated' => false,
                     ]);
                 }
             }
@@ -239,11 +246,15 @@ class MemoryController extends BaseController
 
             if ($primary) {
                 $this->deleteStoredFile($oldPath);
-                $primary->update(['url' => $path]);
+                $primary->update([
+                    'url' => $path,
+                    'is_ai_generated' => false,
+                ]);
             } else {
                 Media::create([
                     'url' => $path,
                     'memory_id' => $memory->id,
+                    'is_ai_generated' => false,
                 ]);
             }
         }
@@ -275,6 +286,91 @@ class MemoryController extends BaseController
         return $this->sendResponse(['id' => (int) $id], 'Memory deleted');
     }
 
+    /**
+     * Generate one AI image from journal text (optional avatar reference) and attach as media.
+     */
+    public function generateImage(Request $request, string $id)
+    {
+        if (! config('services.gemini.enabled', true)) {
+            return $this->sendError('AI image generation is disabled.', [], 503);
+        }
+
+        if (empty(config('services.gemini.api_key'))) {
+            return $this->sendError('AI image generation is not configured.', [], 503);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'use_avatar_reference' => 'sometimes|boolean',
+            'use_recent_memory_photos' => 'sometimes|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors(), 422);
+        }
+
+        $user = Auth::user();
+        $memory = Memory::with(['media', 'location'])->findOrFail($id);
+
+        if ($memory->user_id !== $user->id) {
+            return $this->sendError('Unauthorized.', [], 403);
+        }
+
+        if ($memory->media->isNotEmpty()) {
+            return $this->sendError('This memory already has photos. Remove them first if you want a generated image.', [], 409);
+        }
+
+        $useAvatar = $request->boolean('use_avatar_reference', true);
+
+        $recentMemoryPhotoPaths = [];
+        if ($request->boolean('use_recent_memory_photos', false)) {
+            $recentMemoryPhotoPaths = Media::query()
+                ->whereHas('memory', function ($q) use ($user, $memory) {
+                    $q->where('user_id', $user->id)
+                        ->where('id', '!=', $memory->id);
+                })
+                ->orderByDesc('created_at')
+                ->limit(2)
+                ->pluck('url')
+                ->all();
+        }
+
+        try {
+            $result = $this->geminiMemoryImageService->generateImage(
+                $memory->journal_entry,
+                $user->avatar,
+                $useAvatar,
+                $recentMemoryPhotoPaths
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Gemini memory image failed: '.$e->getMessage(), [
+                'memory_id' => $memory->id,
+                'exception' => $e,
+            ]);
+
+            $message = config('app.debug')
+                ? $e->getMessage()
+                : 'Could not generate an image. Please try again later.';
+
+            return $this->sendError($message, [], 502);
+        }
+
+        $path = $this->storeBinaryMemoryImage($result['bytes'], $result['extension']);
+        if (! $path) {
+            return $this->sendError('Failed to store generated image.', [], 500);
+        }
+
+        Media::create([
+            'url' => $path,
+            'memory_id' => $memory->id,
+            'is_ai_generated' => true,
+        ]);
+
+        $memory->load(['media', 'location']);
+        $this->resolveMediaUrls(collect([$memory]));
+
+        return $this->sendResponse($memory, 'Image generated and attached');
+    }
+
     private function attachAdditionalUploadedFiles(Memory $memory, $files): void
     {
         if (! is_array($files)) {
@@ -288,6 +384,7 @@ class MemoryController extends BaseController
                     Media::create([
                         'url' => $storedPath,
                         'memory_id' => $memory->id,
+                        'is_ai_generated' => false,
                     ]);
                 }
             }
@@ -300,6 +397,32 @@ class MemoryController extends BaseController
     private function getPrimaryMedia(Memory $memory): ?Media
     {
         return Media::where('memory_id', $memory->id)->orderBy('id')->first();
+    }
+
+    private function storeBinaryMemoryImage(string $binary, string $extension): ?string
+    {
+        try {
+            $extension = preg_replace('/[^a-z0-9]/i', '', $extension) ?: 'png';
+            $imageName = time().'_'.uniqid('', true).'_memory.'.$extension;
+            $path = 'memories/'.$imageName;
+            $ok = Storage::disk(self::MEMORY_IMAGE_DISK)->put($path, $binary);
+            if (! $ok) {
+                Log::error('Memory binary image put failed');
+
+                return null;
+            }
+            try {
+                Storage::disk(self::MEMORY_IMAGE_DISK)->setVisibility($path, 'public');
+            } catch (\Throwable $e) {
+                Log::warning('S3 setVisibility failed (non-fatal): '.$e->getMessage());
+            }
+
+            return $path;
+        } catch (\Throwable $e) {
+            Log::error('Memory binary image store failed: '.$e->getMessage(), ['exception' => $e]);
+
+            return null;
+        }
     }
 
     private function storeUploadedImage(UploadedFile $file): ?string

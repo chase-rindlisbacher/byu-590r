@@ -13,7 +13,15 @@ class Media extends Model
     protected $fillable = [
         'url',
         'memory_id',
+        'is_ai_generated',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_ai_generated' => 'boolean',
+        ];
+    }
 
     public function memory(): BelongsTo
     {

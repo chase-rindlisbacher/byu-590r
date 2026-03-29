@@ -1,4 +1,4 @@
-.PHONY: start start-dev start-prod stop clean build-frontend build-backend setup-backend migrate aws-deploy aws-status aws-logs aws-cleanup aws-manifests setup_infrastructure
+.PHONY: start start-dev start-prod stop clean build-frontend build-backend setup-backend migrate migrate-seed seed aws-deploy aws-status aws-logs aws-cleanup aws-manifests setup_infrastructure
 
 # Start all services
 start:
@@ -29,7 +29,7 @@ start:
 	cd backend && docker compose exec -T app php artisan route:clear || true
 	cd backend && docker compose exec -T app php artisan view:clear || true
 	cd backend && docker compose exec -T app php artisan package:discover || true
-	@echo "Running database migrations and seeding..."
+	@echo "Running database migrations..."
 	@$(MAKE) migrate
 	@echo "Setting up demo book images for local storage..."
 	cd backend && docker compose exec -T app php artisan app:setup-demo-images
@@ -81,9 +81,16 @@ start-prod:
 	@echo "Backend API: http://localhost:8000"
 	@echo "Database: localhost:3306"
 
-# Run database migrations and seed; used by start
+# Run pending migrations only (used by start). Does not seed — avoids duplicate rows on every boot.
 migrate:
-	cd backend && docker compose exec -T app php artisan migrate --force --seed
+	cd backend && docker compose exec -T app php artisan migrate --force
+
+# Run DatabaseSeeder (idempotent where seeders use updateOrCreate / firstOrCreate). Run after fresh DB or when you want demo data.
+seed:
+	cd backend && docker compose exec -T app php artisan db:seed --force
+
+# Migrate then seed (e.g. fresh database setup)
+migrate-seed: migrate seed
 
 # Stop all services
 stop:
@@ -113,5 +120,8 @@ help:
 	@echo "  start-prod   - Start with static build (production mode)"
 	@echo "  stop         - Stop all services"
 	@echo "  clean        - Stop and clean up everything"
+	@echo "  migrate      - Run pending migrations only"
+	@echo "  seed         - Run database seeders (demo data)"
+	@echo "  migrate-seed - migrate then seed"
 	@echo "  help         - Show this help message"
 	@echo ""

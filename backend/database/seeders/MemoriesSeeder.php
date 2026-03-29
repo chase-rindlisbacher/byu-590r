@@ -7,7 +7,6 @@ use App\Models\Media;
 use App\Models\Memory;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class MemoriesSeeder extends Seeder
@@ -20,7 +19,7 @@ class MemoriesSeeder extends Seeder
     public function run(): void
     {
         $user = User::first(); // or User::find(1)
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
@@ -95,13 +94,25 @@ class MemoriesSeeder extends Seeder
             $media = $data['media'] ?? [];
             unset($data['media']);
 
-            $memory = Memory::create($data);
+            $memory = Memory::updateOrCreate(
+                [
+                    'user_id' => $data['user_id'],
+                    'journal_entry' => $data['journal_entry'],
+                    'time' => $data['time'],
+                ],
+                [
+                    'location_id' => $data['location_id'],
+                ]
+            );
 
             foreach ($media as $m) {
-                Media::create([
-                    'url' => $m['url'],
-                    'memory_id' => $memory->id,
-                ]);
+                Media::firstOrCreate(
+                    [
+                        'memory_id' => $memory->id,
+                        'url' => $m['url'],
+                    ],
+                    ['is_ai_generated' => false]
+                );
             }
         }
     }

@@ -8,6 +8,8 @@ export interface Media {
   id: number;
   url: string;
   memory_id: number;
+  /** True when created by server-side Gemini image generation. */
+  is_ai_generated?: boolean;
 }
 
 export interface Location {
@@ -180,5 +182,23 @@ export class MemoryService {
       results: { id: number };
       message: string;
     }>(`${this.apiUrl}memories/${id}`, { headers: this.getAuthHeaders() });
+  }
+
+  /**
+   * Optional AI-generated image from journal text (and optional avatar reference). Memory must have no media.
+   */
+  generateMemoryImage(
+    memoryId: number,
+    body?: {
+      use_avatar_reference?: boolean;
+      /** When true, server attaches up to 2 most recent photos from your other memories as Gemini context. */
+      use_recent_memory_photos?: boolean;
+    }
+  ): Observable<{ success: boolean; results: Memory; message: string }> {
+    return this.http.post<{ success: boolean; results: Memory; message: string }>(
+      `${this.apiUrl}memories/${memoryId}/generate-image`,
+      body ?? {},
+      { headers: this.getAuthHeaders() }
+    );
   }
 }

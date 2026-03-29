@@ -6,7 +6,6 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MemoryController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\UserController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Hello World API routes
@@ -37,6 +36,9 @@ Route::middleware(\App\Http\Middleware\AuthenticateApi::class)->group(function (
     Route::resource('books', BookController::class);
     Route::get('locations', [LocationController::class, 'index']);
     Route::post('locations', [LocationController::class, 'store']);
+    Route::post('memories/{id}/generate-image', [MemoryController::class, 'generateImage'])
+        ->whereNumber('id')
+        ->middleware('throttle:10,60');
     Route::resource('memories', MemoryController::class);
     // PHP does not populate multipart file uploads on PUT; use POST for multipart updates.
     Route::post('memories/{id}', [MemoryController::class, 'update'])->whereNumber('id');
