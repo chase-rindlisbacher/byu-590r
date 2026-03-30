@@ -145,8 +145,8 @@ test.describe("Deployment Verification", () => {
 		// Email: testuser@test.com, Password: password12345
 		const response = await request.post(`${BACKEND_URL}/api/login`, {
 			data: {
-				email: "testuser@test.com",
-				password: "password12345",
+				email: "chase@rindlisbacher.com",
+				password: "password",
 			},
 		});
 
@@ -174,7 +174,7 @@ test.describe("Deployment Verification", () => {
 		expect(body.success).toBe(true);
 		expect(body.results).toBeTruthy();
 		expect(body.results.token).toBeTruthy();
-		expect(body.results.name).toBe("Test User");
+		expect(body.results.name).toBe("Chase Rindlisbacher");
 		expect(body.message).toContain("login successfully");
 
 		// Verify CORS headers are present
