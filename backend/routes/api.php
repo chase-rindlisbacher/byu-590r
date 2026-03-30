@@ -40,7 +40,6 @@ Route::middleware(\App\Http\Middleware\AuthenticateApi::class)->group(function (
         ->whereNumber('id')
         ->middleware('throttle:10,60');
     Route::resource('memories', MemoryController::class);
-    // PHP does not populate multipart file uploads on PUT; use POST for multipart updates.
     Route::post('memories/{id}', [MemoryController::class, 'update'])->whereNumber('id');
     Route::post('memories/{id}/media', [MemoryController::class, 'addMedia'])->whereNumber('id');
     Route::delete('media/{media}', [MemoryController::class, 'destroyMedia'])->whereNumber('media');
