@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\Log;
 
 class BaseController extends Controller
 {
+    /**
+     * Presigned URL lifetime for profile avatars (minutes).
+     * Use presigned URLs when the bucket blocks public reads; refresh on login / GET /api/user.
+     */
+    protected const AVATAR_PRESIGNED_TTL_MINUTES = 10080; // 7 days
+
     public function sendResponse($result, $message)
     {
         $response = [
@@ -38,7 +44,7 @@ class BaseController extends Controller
      * FILESYSTEM_DISK=local or S3 is not configured; otherwise uses S3.
      *
      * @param string|null $path Storage path (e.g. "images/hp1.jpeg")
-     * @param int|null $minutes Minutes for S3 temporary URL (null = public URL)
+     * @param int|null $minutes Minutes for S3 temporary URL (null = try public object URL; fails on private buckets)
      * @return string|null
      */
     public function getS3Url($path, $minutes = 10)

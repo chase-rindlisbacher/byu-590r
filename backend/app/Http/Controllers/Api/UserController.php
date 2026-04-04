@@ -16,8 +16,8 @@ class UserController extends BaseController
     {
         $authUser = Auth::user();
         $user = User::with('userPreference')->findOrFail($authUser->id);
-        // null = stable public URL (not 10m presigned) so SPA localStorage avatar survives sessions
-        $user->avatar = $this->getS3Url($user->avatar, null);
+        // Presigned URL — same idea as memory media; public bucket URLs 403 when Block Public Access is on
+        $user->avatar = $this->getS3Url($user->avatar, self::AVATAR_PRESIGNED_TTL_MINUTES);
 
         $pref = $user->userPreference
             ?? UserPreference::firstOrCreate(
@@ -78,7 +78,6 @@ class UserController extends BaseController
                 $image_name,
                 's3'
             );
-            Storage::disk('s3')->setVisibility($path, "public");
             if (!$path) {
                 return $this->sendError($path, 'User profile avatar failed to upload!');
             }
@@ -87,7 +86,7 @@ class UserController extends BaseController
             $user->save();
             $success['avatar'] = null;
             if (isset($user->avatar)) {
-                $success['avatar'] = $this->getS3Url($path, null);
+                $success['avatar'] = $this->getS3Url($path, self::AVATAR_PRESIGNED_TTL_MINUTES);
             }
             return $this->sendResponse($success, 'User profile avatar uploaded successfully!');
         }
