@@ -360,9 +360,11 @@ class MemoryController extends BaseController
         }
 
         try {
+            $avatarPathForGemini = $useAvatar ? $user->avatar : null;
+
             $result = $this->geminiMemoryImageService->generateImage(
                 $memory->journal_entry,
-                $user->avatar,
+                $avatarPathForGemini,
                 $useAvatar,
                 $recentMemoryPhotoPaths
             );

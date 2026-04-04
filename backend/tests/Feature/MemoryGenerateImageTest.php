@@ -78,6 +78,60 @@ class MemoryGenerateImageTest extends TestCase
         $this->assertTrue($memory->media->first()->is_ai_generated);
     }
 
+    public function test_generate_image_with_use_avatar_reference_false_ignores_stored_avatar(): void
+    {
+        Storage::fake('s3');
+        config(['services.gemini.enabled' => true]);
+        config(['services.gemini.api_key' => 'test-api-key']);
+        config(['services.gemini.model' => 'gemini-2.5-flash-image']);
+
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', true);
+        Storage::disk('s3')->put('images/avatar.jpg', $png);
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                [
+                                    'inlineData' => [
+                                        'mimeType' => 'image/png',
+                                        'data' => base64_encode($png),
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create(['avatar' => 'images/avatar.jpg']);
+        $location = Location::create([
+            'name' => 'Test City',
+            'street' => null,
+            'city' => null,
+            'state' => 'UT',
+            'zipcode' => null,
+        ]);
+        $memory = Memory::create([
+            'journal_entry' => 'A walk in the park with friends.',
+            'time' => now(),
+            'location_id' => $location->id,
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->withHeaders($this->authHeader($user))
+            ->postJson("/api/memories/{$memory->id}/generate-image", [
+                'use_avatar_reference' => false,
+            ]);
+
+        $response->assertStatus(200);
+        $memory->refresh();
+        $this->assertCount(1, $memory->media);
+    }
+
     public function test_generate_image_with_recent_memory_photos_loads_references_from_s3(): void
     {
         Storage::fake('s3');

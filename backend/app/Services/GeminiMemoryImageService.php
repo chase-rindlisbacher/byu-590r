@@ -37,6 +37,11 @@ class GeminiMemoryImageService
 
         $additionalReferencePaths = array_values(array_slice($additionalReferencePaths, 0, 2));
 
+        // Opt-out matches "no profile photo": do not load or send avatar bytes to Gemini
+        if (! $useAvatarReference) {
+            $avatarStoragePath = null;
+        }
+
         $hasAvatarInline = false;
         if ($useAvatarReference && $avatarStoragePath) {
             $inline = $this->loadInlineImageFromS3($avatarStoragePath);
