@@ -190,7 +190,13 @@ jobs:
             (grep -q '^AWS_DEFAULT_REGION=' .env && sed -i 's/^AWS_DEFAULT_REGION=.*/AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}/' .env || echo 'AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}' >> .env); \
             ([ -z '${{ secrets.APP_DEBUG }}' ] || (grep -q '^APP_DEBUG=' .env && sed -i 's/^APP_DEBUG=.*/APP_DEBUG=${{ secrets.APP_DEBUG }}/' .env || echo 'APP_DEBUG=${{ secrets.APP_DEBUG }}' >> .env)); \
             ([ -z '${{ secrets.OPENAI_API_KEY }}' ] || (grep -q '^OPENAI_API_KEY=' .env && sed -i 's|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}|' .env || echo 'OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}' >> .env)); \
+            ([ -z '${{ secrets.GEMINI_API_KEY }}' ] || (grep -q '^GEMINI_API_KEY=' .env && sed -i 's|^GEMINI_API_KEY=.*|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|' .env || echo 'GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}' >> .env)); \
             true"
+
+      # Default PHP is often 2M — memory photos never reach S3; profile avatars can still work if smaller.
+      - name: Ensure PHP upload limits on EC2 (memory multipart)
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo mkdir -p /etc/php/8.3/apache2/conf.d && printf '%s\n' 'upload_max_filesize = 32M' 'post_max_size = 40M' 'max_file_uploads = 30' | sudo tee /etc/php/8.3/apache2/conf.d/99-byu-uploads.ini > /dev/null && (sudo systemctl reload apache2 2>/dev/null || sudo systemctl restart apache2)"
 
       - name: Migrate and restart backend
         run: |

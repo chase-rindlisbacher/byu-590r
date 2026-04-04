@@ -144,21 +144,23 @@ sudo tee /etc/apache2/sites-available/byu-590r-backend.conf > /dev/null << 'APAC
 <VirtualHost *:4444>
     ServerName localhost
     DocumentRoot /var/www/html/api/public
-    
+    # Large multipart memory uploads (cover + files[]); default PHP is often 2M per file
+    LimitRequestBody 52428800
+
     <Directory /var/www/html/api/public>
         AllowOverride All
         Require all granted
-        
+
         # Laravel routing
         RewriteEngine On
         RewriteCond %%{REQUEST_FILENAME} !-f
         RewriteCond %%{REQUEST_FILENAME} !-d
         RewriteRule ^(.*)$ index.php [QSA,L]
-        
+
         # Set index files
         DirectoryIndex index.php index.html
     </Directory>
-    
+
     ErrorLog $${APACHE_LOG_DIR}/byu590r_backend_error.log
     CustomLog $${APACHE_LOG_DIR}/byu590r_backend_access.log combined
 </VirtualHost>

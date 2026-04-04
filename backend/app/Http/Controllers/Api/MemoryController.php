@@ -403,12 +403,15 @@ class MemoryController extends BaseController
      */
     private function rejectBrokenMultipartFiles(Request $request, array $keys = ['file', 'files']): ?\Illuminate\Http\JsonResponse
     {
+        // Use allFiles(): hasFile() can be false when PHP rejected the upload (invalid
+        // UploadedFile), and Laravel's validator then returns the generic "failed to upload".
+        $allFiles = $request->allFiles();
         foreach ($keys as $key) {
-            if (! $request->hasFile($key)) {
+            if (! array_key_exists($key, $allFiles)) {
                 continue;
             }
 
-            $raw = $request->file($key);
+            $raw = $allFiles[$key];
             $items = $key === 'files' ? (array) $raw : [$raw];
 
             foreach ($items as $index => $file) {
