@@ -119,6 +119,12 @@ export class MemoriesComponent implements OnInit {
   aiImageUseRecentMemoryPhotos = signal(false);
   memoryIsGeneratingAiImage = signal(false);
 
+  /**
+   * From GET /api/health — when false, do not show the post-save AI image dialog
+   * (server has no GEMINI_API_KEY). null = not loaded yet.
+   */
+  aiImageGenerationAvailable = signal<boolean | null>(null);
+
   /** True when the user has at least one photo on another memory (enables meaningful recent-photo context). */
   hasOtherMemoriesWithPhotosForAi = computed(() => {
     const offerId = this.aiImageOfferMemory()?.id;
@@ -159,6 +165,14 @@ export class MemoriesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.memoryService.getBackendHealth().subscribe({
+      next: (h) => {
+        this.aiImageGenerationAvailable.set(!!h.ai_image_generation_available);
+      },
+      error: () => {
+        this.aiImageGenerationAvailable.set(false);
+      },
+    });
     this.getMemories();
     this.loadLocations();
   }
@@ -404,22 +418,57 @@ export class MemoriesComponent implements OnInit {
     this.maybeOfferAiImage(memory);
   }
 
-  private maybeOfferAiImage(memory: Memory | null | undefined): void {
+  private canOfferAiImage(memory: Memory | null | undefined): boolean {
     if (!memory?.id) {
-      return;
+      return false;
     }
     if (memory.media && memory.media.length > 0) {
-      return;
+      return false;
     }
     if (!this.userPreferencesStore.shouldOfferAiImagePrompt()) {
+      return false;
+    }
+    return true;
+  }
+
+  private maybeOfferAiImage(memory: Memory | null | undefined): void {
+    if (!this.canOfferAiImage(memory)) {
       return;
     }
-    this.aiImageUseAvatarReference.set(true);
-    const prefs = this.userPreferencesStore.preferences();
-    this.aiImageUseRecentMemoryPhotos.set(
-      prefs?.use_extra_memory_context ?? true
-    );
-    this.aiImageOfferMemory.set(memory);
+
+    const openDialog = () => {
+      this.aiImageUseAvatarReference.set(true);
+      const prefs = this.userPreferencesStore.preferences();
+      this.aiImageUseRecentMemoryPhotos.set(
+        prefs?.use_extra_memory_context ?? true
+      );
+      this.aiImageOfferMemory.set(memory!);
+    };
+
+    const avail = this.aiImageGenerationAvailable();
+    if (avail === false) {
+      return;
+    }
+    if (avail === true) {
+      openDialog();
+      return;
+    }
+
+    this.memoryService.getBackendHealth().subscribe({
+      next: (h) => {
+        this.aiImageGenerationAvailable.set(!!h.ai_image_generation_available);
+        if (!this.aiImageGenerationAvailable()) {
+          return;
+        }
+        if (!this.canOfferAiImage(memory)) {
+          return;
+        }
+        openDialog();
+      },
+      error: () => {
+        this.aiImageGenerationAvailable.set(false);
+      },
+    });
   }
 
   dismissAiImageOffer(): void {

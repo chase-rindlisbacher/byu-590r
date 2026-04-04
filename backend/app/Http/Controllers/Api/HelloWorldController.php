@@ -26,11 +26,17 @@ class HelloWorldController extends Controller
      */
     public function health(): JsonResponse
     {
+        $geminiEnabled = (bool) config('services.gemini.enabled', true);
+        $geminiKey = config('services.gemini.api_key');
+        $aiImageAvailable = $geminiEnabled && ! empty($geminiKey);
+
         return response()->json([
             'status' => 'healthy',
             'service' => 'byu-590r-monorepo-backend',
             'version' => '1.0.0',
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
+            // When false, optional memory AI image generation is unavailable (set GEMINI_API_KEY on the server).
+            'ai_image_generation_available' => $aiImageAvailable,
         ]);
     }
 

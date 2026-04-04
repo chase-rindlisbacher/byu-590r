@@ -93,6 +93,13 @@ sudo add-apt-repository ppa:ondrej/php -y
 sudo apt update
 sudo apt install -y php8.3 php8.3-mysql php8.3-xml php8.3-mbstring php8.3-curl php8.3-zip php8.3-gd php8.3-cli php8.3-common libapache2-mod-php8.3
 
+# Memory photo uploads: default PHP is often 2M — too small for phone camera images
+sudo tee /etc/php/8.3/apache2/conf.d/99-byu-uploads.ini > /dev/null << 'PHP_UPLOADS_EOF'
+upload_max_filesize = 32M
+post_max_size = 40M
+max_file_uploads = 30
+PHP_UPLOADS_EOF
+
 # Install Composer (non-fatal: Apache/MySQL still set up if getcomposer.org is unreachable)
 curl -sS --connect-timeout 30 https://getcomposer.org/installer | php 2>/dev/null || true
 if [ -f composer.phar ]; then

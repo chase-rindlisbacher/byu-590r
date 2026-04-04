@@ -43,6 +43,15 @@ export interface MemoryApiResponse {
   message: string;
 }
 
+/** Public GET /api/health — includes whether Gemini-backed AI image generation is configured. */
+export interface BackendHealthResponse {
+  status: string;
+  service?: string;
+  version?: string;
+  timestamp?: string;
+  ai_image_generation_available?: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -57,6 +66,11 @@ export class MemoryService {
       return { Authorization: `Bearer ${user.token}` };
     }
     return {};
+  }
+
+  /** No auth — used to hide AI image prompts when the server has no GEMINI_API_KEY. */
+  getBackendHealth(): Observable<BackendHealthResponse> {
+    return this.http.get<BackendHealthResponse>(`${this.apiUrl}health`);
   }
 
   getMemories(): Observable<{

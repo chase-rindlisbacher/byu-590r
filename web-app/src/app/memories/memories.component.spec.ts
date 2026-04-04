@@ -58,9 +58,18 @@ describe('MemoriesComponent', () => {
   let mockLocationService: jasmine.SpyObj<LocationService>;
 
   beforeEach(async () => {
-    mockMemoryService = jasmine.createSpyObj('MemoryService', ['getMemories']);
+    mockMemoryService = jasmine.createSpyObj('MemoryService', [
+      'getMemories',
+      'getBackendHealth',
+    ]);
     mockMemoryService.getMemories.and.returnValue(
       of({ success: true, results: mockMemories, message: 'Memories' })
+    );
+    mockMemoryService.getBackendHealth.and.returnValue(
+      of({
+        status: 'healthy',
+        ai_image_generation_available: false,
+      })
     );
 
     mockLocationService = jasmine.createSpyObj('LocationService', [

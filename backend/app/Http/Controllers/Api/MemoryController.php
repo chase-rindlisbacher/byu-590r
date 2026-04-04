@@ -61,6 +61,11 @@ class MemoryController extends BaseController
      */
     public function store(Request $request)
     {
+        $broken = $this->rejectBrokenMultipartFiles($request, ['file', 'files']);
+        if ($broken) {
+            return $broken;
+        }
+
         $validator = Validator::make($request->all(), [
             'journal_entry' => 'required|string',
             'time' => 'required|date',
@@ -110,6 +115,11 @@ class MemoryController extends BaseController
      */
     public function addMedia(Request $request, string $id)
     {
+        $broken = $this->rejectBrokenMultipartFiles($request, ['files']);
+        if ($broken) {
+            return $broken;
+        }
+
         $validator = Validator::make($request->all(), [
             'files' => 'required|array|min:1',
             'files.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp',
@@ -212,6 +222,11 @@ class MemoryController extends BaseController
      */
     public function update(Request $request, string $id)
     {
+        $broken = $this->rejectBrokenMultipartFiles($request, ['file']);
+        if ($broken) {
+            return $broken;
+        }
+
         $validator = Validator::make($request->all(), [
             'journal_entry' => 'required|string',
             'time' => 'required|date',
@@ -379,6 +394,53 @@ class MemoryController extends BaseController
         $this->resolveMediaUrls(collect([$memory]));
 
         return $this->sendResponse($memory, 'Image generated and attached');
+    }
+
+    /**
+     * When PHP rejects an upload (size limits, partial upload, etc.), Laravel's
+     * file rules report a generic "failed to upload" message. Detect that first
+     * and return a clear error — common on production where upload_max_filesize is 2M.
+     */
+    private function rejectBrokenMultipartFiles(Request $request, array $keys = ['file', 'files']): ?\Illuminate\Http\JsonResponse
+    {
+        foreach ($keys as $key) {
+            if (! $request->hasFile($key)) {
+                continue;
+            }
+
+            $raw = $request->file($key);
+            $items = $key === 'files' ? (array) $raw : [$raw];
+
+            foreach ($items as $index => $file) {
+                if (! $file instanceof UploadedFile) {
+                    continue;
+                }
+                if ($file->isValid()) {
+                    continue;
+                }
+
+                $attribute = $key === 'files' ? "files.{$index}" : $key;
+                $detail = $this->phpUploadErrorMessage($file->getError());
+
+                return $this->sendError($detail, [$attribute => [$detail]], 422);
+            }
+        }
+
+        return null;
+    }
+
+    private function phpUploadErrorMessage(int $errorCode): string
+    {
+        return match ($errorCode) {
+            UPLOAD_ERR_INI_SIZE => 'The file exceeds the server upload limit (PHP upload_max_filesize). Try a smaller image, or increase PHP upload_max_filesize and post_max_size on the server (e.g. 32M).',
+            UPLOAD_ERR_FORM_SIZE => 'The file exceeds the maximum POST size (PHP post_max_size).',
+            UPLOAD_ERR_PARTIAL => 'The file was only partially uploaded. Please try again.',
+            UPLOAD_ERR_NO_FILE => 'No file was received.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Server is missing a temporary folder for uploads.',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write the upload to disk on the server.',
+            UPLOAD_ERR_EXTENSION => 'A PHP extension blocked the file upload.',
+            default => 'The file failed to upload.',
+        };
     }
 
     private function attachAdditionalUploadedFiles(Memory $memory, $files): void
