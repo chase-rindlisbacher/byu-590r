@@ -18,18 +18,18 @@ class UserPreferencesApiTest extends TestCase
         return ['Authorization' => 'Bearer '.$token->plainTextToken];
     }
 
-    public function test_get_preferences_returns_defaults(): void
+    public function test_get_user_includes_preferences_defaults(): void
     {
         $user = User::factory()->create();
 
         $response = $this->withHeaders($this->authHeader($user))
-            ->getJson('/api/user/preferences');
+            ->getJson('/api/user');
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
-        $response->assertJsonPath('results.generate_images', true);
-        $response->assertJsonPath('results.use_extra_memory_context', true);
-        $response->assertJsonPath('results.dismiss_memory_image_prompt', false);
+        $response->assertJsonPath('results.preferences.generate_images', true);
+        $response->assertJsonPath('results.preferences.use_extra_memory_context', true);
+        $response->assertJsonPath('results.preferences.dismiss_memory_image_prompt', false);
         $this->assertDatabaseHas('user_preferences', [
             'user_id' => $user->id,
         ]);

@@ -15,20 +15,21 @@ class UserController extends BaseController
     public function getUser()
     {
         $authUser = Auth::user();
-        $user = User::findOrFail($authUser->id);
-        $user->avatar = $this->getS3Url($user->avatar);
-        return $this->sendResponse($user, 'User');
-    }
+        $user = User::with('userPreference')->findOrFail($authUser->id);
+        // null = stable public URL (not 10m presigned) so SPA localStorage avatar survives sessions
+        $user->avatar = $this->getS3Url($user->avatar, null);
 
-    public function getPreferences()
-    {
-        $authUser = Auth::user();
-        $pref = UserPreference::firstOrCreate(
-            ['user_id' => $authUser->id],
-            UserPreference::defaultAttributes()
-        );
+        $pref = $user->userPreference
+            ?? UserPreference::firstOrCreate(
+                ['user_id' => $user->id],
+                UserPreference::defaultAttributes()
+            );
 
-        return $this->sendResponse($this->preferencePayload($pref), 'User preferences');
+        $results = $user->toArray();
+        unset($results['user_preference']);
+        $results['preferences'] = $this->preferencePayload($pref);
+
+        return $this->sendResponse($results, 'User');
     }
 
     public function updatePreferences(Request $request)
@@ -86,7 +87,7 @@ class UserController extends BaseController
             $user->save();
             $success['avatar'] = null;
             if (isset($user->avatar)) {
-                $success['avatar'] = $this->getS3Url($path);
+                $success['avatar'] = $this->getS3Url($path, null);
             }
             return $this->sendResponse($success, 'User profile avatar uploaded successfully!');
         }

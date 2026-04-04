@@ -5,6 +5,7 @@ import { MatSlideToggleModule, MatSlideToggleChange } from '@angular/material/sl
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { UserPreferencesStore } from '../core/stores/user-preferences.store';
+import { UserService } from '../core/services/user.service';
 
 @Component({
   selector: 'app-settings',
@@ -21,14 +22,26 @@ import { UserPreferencesStore } from '../core/stores/user-preferences.store';
 })
 export class SettingsComponent implements OnInit {
   protected prefStore = inject(UserPreferencesStore);
+  private userService = inject(UserService);
   private snackBar = inject(MatSnackBar);
 
   saving = false;
 
   ngOnInit(): void {
-    if (!this.prefStore.preferences()) {
-      this.prefStore.load();
+    if (this.prefStore.preferences()) {
+      return;
     }
+    this.userService.getUser().subscribe({
+      next: (res) => {
+        this.prefStore.syncFromUser(res.results);
+      },
+      error: () => {
+        this.snackBar.open('Could not load preferences', 'Dismiss', {
+          duration: 5000,
+          panelClass: ['error-snackbar'],
+        });
+      },
+    });
   }
 
   onGenerateImages(ev: MatSlideToggleChange): void {

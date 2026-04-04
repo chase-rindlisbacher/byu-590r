@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
+import type { UserPreferences } from './user-preference.service';
 
 export interface User {
   id: number;
@@ -10,6 +11,8 @@ export interface User {
   email: string;
   avatar?: string | null;
   email_verified_at?: string | null;
+  /** Included on GET /api/user (eager-loaded userPreference). */
+  preferences?: UserPreferences | null;
 }
 
 @Injectable({

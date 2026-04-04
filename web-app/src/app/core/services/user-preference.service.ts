@@ -28,18 +28,6 @@ export class UserPreferenceService {
     return {};
   }
 
-  getPreferences(): Observable<{
-    success: boolean;
-    results: UserPreferences;
-    message: string;
-  }> {
-    return this.http.get<{
-      success: boolean;
-      results: UserPreferences;
-      message: string;
-    }>(`${this.apiUrl}user/preferences`, { headers: this.getAuthHeaders() });
-  }
-
   updatePreferences(
     body: UserPreferencesUpdate
   ): Observable<{

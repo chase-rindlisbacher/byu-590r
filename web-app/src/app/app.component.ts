@@ -143,7 +143,7 @@ export class AppComponent {
           this.showEmailNotVerifiedDialog.set(true);
         }
         this.userStore.setUser(response.results);
-        this.userPreferencesStore.load();
+        this.userPreferencesStore.syncFromUser(response.results);
       },
       error: () => {
         this.logout();

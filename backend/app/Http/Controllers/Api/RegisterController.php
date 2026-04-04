@@ -51,7 +51,8 @@ class RegisterController extends BaseController
             $success['name'] = $user->name;
             $success['avatar'] = null;
             if (isset($user->avatar)) {
-                $success['avatar'] = $this->getS3Url($user->avatar);
+                // null = public URL; default getS3Url() uses 10m presigned URLs that expire in localStorage
+                $success['avatar'] = $this->getS3Url($user->avatar, null);
             }
 
             return $this->sendResponse($success, 'User login successfully.');

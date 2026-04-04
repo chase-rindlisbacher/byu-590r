@@ -39,40 +39,32 @@ export const UserPreferencesStore = signalStore(
       return true;
     }),
   })),
-  withMethods(
-    (
-      store,
-      prefService = inject(UserPreferenceService)
-    ) => ({
-      load(): void {
-        prefService.getPreferences().subscribe({
-          next: (res) => {
-            patchState(store, { preferences: res.results });
-          },
-          error: () => {
-            patchState(store, { preferences: null });
-          },
-        });
-      },
-      patchFromServer(prefs: UserPreferences): void {
+  withMethods((store, prefService = inject(UserPreferenceService)) => ({
+    /** Call after GET /api/user — preferences are nested on the user payload. */
+    syncFromUser(user: { preferences?: UserPreferences | null } | null | undefined): void {
+      const prefs = user?.preferences;
+      if (prefs) {
         patchState(store, { preferences: prefs });
-      },
-      updatePartial(
-        body: UserPreferencesUpdate,
-        onDone?: (prefs: UserPreferences) => void,
-        onError?: () => void
-      ): void {
-        prefService.updatePreferences(body).subscribe({
-          next: (res) => {
-            patchState(store, { preferences: res.results });
-            onDone?.(res.results);
-          },
-          error: () => onError?.(),
-        });
-      },
-      clear(): void {
-        patchState(store, initialState);
-      },
-    })
-  )
+      }
+    },
+    patchFromServer(prefs: UserPreferences): void {
+      patchState(store, { preferences: prefs });
+    },
+    updatePartial(
+      body: UserPreferencesUpdate,
+      onDone?: (prefs: UserPreferences) => void,
+      onError?: () => void
+    ): void {
+      prefService.updatePreferences(body).subscribe({
+        next: (res) => {
+          patchState(store, { preferences: res.results });
+          onDone?.(res.results);
+        },
+        error: () => onError?.(),
+      });
+    },
+    clear(): void {
+      patchState(store, initialState);
+    },
+  }))
 );

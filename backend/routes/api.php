@@ -31,7 +31,6 @@ Route::middleware(\App\Http\Middleware\AuthenticateApi::class)->group(function (
         Route::delete('user/remove_avatar', 'removeAvatar');
         Route::post('user/send_verification_email', 'sendVerificationEmail');
         Route::post('user/change_email', 'changeEmail');
-        Route::get('user/preferences', 'getPreferences');
         Route::patch('user/preferences', 'updatePreferences');
     });
 
