@@ -1,0 +1,67 @@
+<div class="settings-page">
+  <mat-card class="settings-card">
+    <mat-card-header>
+      <mat-card-title>Settings</mat-card-title>
+      <mat-card-subtitle>Memory images &amp; AI prompts</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (!prefStore.preferences()) {
+        <div class="loading-row">
+          <mat-spinner diameter="36"></mat-spinner>
+          <span>Loading preferences…</span>
+        </div>
+      } @else {
+        <p class="hint">
+          These choices apply to your account and sync when you save.
+        </p>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <strong>Allow AI-generated memory images</strong>
+            <span class="sub"
+              >When off, you will not be offered generated images for memories
+              without photos, and generation requests are blocked.</span
+            >
+          </div>
+          <mat-slide-toggle
+            [checked]="prefStore.preferences()!.generate_images"
+            [disabled]="saving"
+            (change)="onGenerateImages($event)"
+          ></mat-slide-toggle>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <strong>Extra context from your other memories</strong>
+            <span class="sub"
+              >When generating an image, allow using up to two recent photos
+              from your other memories as extra style/mood context (in addition
+              to your profile photo when enabled in the prompt).</span
+            >
+          </div>
+          <mat-slide-toggle
+            [checked]="prefStore.preferences()!.use_extra_memory_context"
+            [disabled]="saving"
+            (change)="onExtraContext($event)"
+          ></mat-slide-toggle>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <strong>Don&rsquo;t ask to generate an image again</strong>
+            <span class="sub"
+              >When on, we won&rsquo;t show the &ldquo;Generate a memory
+              image?&rdquo; prompt after you save a memory without photos. You
+              can turn this off anytime.</span
+            >
+          </div>
+          <mat-slide-toggle
+            [checked]="prefStore.preferences()!.dismiss_memory_image_prompt"
+            [disabled]="saving"
+            (change)="onDismissPrompt($event)"
+          ></mat-slide-toggle>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

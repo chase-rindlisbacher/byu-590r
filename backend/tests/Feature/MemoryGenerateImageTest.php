@@ -6,6 +6,7 @@ use App\Models\Location;
 use App\Models\Media;
 use App\Models\Memory;
 use App\Models\User;
+use App\Models\UserPreference;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -232,5 +233,33 @@ class MemoryGenerateImageTest extends TestCase
             ->postJson("/api/memories/{$memory->id}/generate-image", []);
 
         $response->assertStatus(503);
+    }
+
+    public function test_generate_image_returns_403_when_user_disabled_ai_in_settings(): void
+    {
+        config(['services.gemini.enabled' => true]);
+        config(['services.gemini.api_key' => 'test-api-key']);
+
+        $user = User::factory()->create();
+        UserPreference::where('user_id', $user->id)->update(['generate_images' => false]);
+
+        $location = Location::create([
+            'name' => 'Test City',
+            'street' => null,
+            'city' => null,
+            'state' => 'UT',
+            'zipcode' => null,
+        ]);
+        $memory = Memory::create([
+            'journal_entry' => 'Text only.',
+            'time' => now(),
+            'location_id' => $location->id,
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->withHeaders($this->authHeader($user))
+            ->postJson("/api/memories/{$memory->id}/generate-image", []);
+
+        $response->assertStatus(403);
     }
 }

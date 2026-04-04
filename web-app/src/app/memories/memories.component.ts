@@ -19,6 +19,7 @@ import {
   CreateLocationPayload,
 } from '../core/services/location.service';
 import { MemoryStore } from '../core/stores/memory.store';
+import { UserPreferencesStore } from '../core/stores/user-preferences.store';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -65,6 +66,7 @@ export class MemoriesComponent implements OnInit {
   private memoryService = inject(MemoryService);
   private locationService = inject(LocationService);
   private memoryStore = inject(MemoryStore);
+  private userPreferencesStore = inject(UserPreferencesStore);
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
 
@@ -409,13 +411,40 @@ export class MemoriesComponent implements OnInit {
     if (memory.media && memory.media.length > 0) {
       return;
     }
+    if (!this.userPreferencesStore.shouldOfferAiImagePrompt()) {
+      return;
+    }
     this.aiImageUseAvatarReference.set(true);
-    this.aiImageUseRecentMemoryPhotos.set(false);
+    const prefs = this.userPreferencesStore.preferences();
+    this.aiImageUseRecentMemoryPhotos.set(
+      prefs?.use_extra_memory_context ?? true
+    );
     this.aiImageOfferMemory.set(memory);
   }
 
   dismissAiImageOffer(): void {
     this.aiImageOfferMemory.set(null);
+  }
+
+  /** Persist “don’t ask again” and close the modal. */
+  dontAskAgainAiImagePrompt(): void {
+    this.userPreferencesStore.updatePartial(
+      { dismiss_memory_image_prompt: true },
+      () => {
+        this.aiImageOfferMemory.set(null);
+        this.snackBar.open(
+          'Preference saved. You can change this anytime in Settings.',
+          'Dismiss',
+          { duration: 5000 }
+        );
+      },
+      () => {
+        this.snackBar.open('Could not save preference', 'Dismiss', {
+          duration: 5000,
+          panelClass: ['error-snackbar'],
+        });
+      }
+    );
   }
 
   onAiAvatarRefChange(ev: MatCheckboxChange): void {

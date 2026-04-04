@@ -26,5 +26,11 @@ export const routes: Routes = [
       import('./memories/memories.component').then((m) => m.MemoriesComponent),
     canActivate: [authGuard],
   },
+  {
+    path: 'settings',
+    loadComponent: () =>
+      import('./settings/settings.component').then((m) => m.SettingsComponent),
+    canActivate: [authGuard],
+  },
   { path: '**', redirectTo: '/login' },
 ];

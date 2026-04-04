@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Media;
 use App\Models\Memory;
+use App\Models\UserPreference;
 use App\Services\GeminiMemoryImageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -319,10 +320,19 @@ class MemoryController extends BaseController
             return $this->sendError('This memory already has photos. Remove them first if you want a generated image.', [], 409);
         }
 
+        $pref = UserPreference::firstOrCreate(
+            ['user_id' => $user->id],
+            UserPreference::defaultAttributes()
+        );
+        if (! $pref->generate_images) {
+            return $this->sendError('AI image generation is disabled in your settings.', [], 403);
+        }
+
         $useAvatar = $request->boolean('use_avatar_reference', true);
 
         $recentMemoryPhotoPaths = [];
-        if ($request->boolean('use_recent_memory_photos', false)) {
+        $useRecentPhotos = $request->boolean('use_recent_memory_photos', false) && $pref->use_extra_memory_context;
+        if ($useRecentPhotos) {
             $recentMemoryPhotoPaths = Media::query()
                 ->whereHas('memory', function ($q) use ($user, $memory) {
                     $q->where('user_id', $user->id)

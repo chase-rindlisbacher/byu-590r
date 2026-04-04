@@ -1,0 +1,51 @@
+.settings-page {
+  max-width: 720px;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+}
+
+.settings-card {
+  mat-card-content {
+    padding-top: 0.5rem;
+  }
+}
+
+.hint {
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.6));
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.toggle-label {
+  flex: 1;
+  min-width: 0;
+
+  .sub {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.6));
+    line-height: 1.4;
+  }
+}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Mail\VerifyEmail;
 use App\Models\User;
+use App\Models\UserPreference;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -17,6 +18,48 @@ class UserController extends BaseController
         $user = User::findOrFail($authUser->id);
         $user->avatar = $this->getS3Url($user->avatar);
         return $this->sendResponse($user, 'User');
+    }
+
+    public function getPreferences()
+    {
+        $authUser = Auth::user();
+        $pref = UserPreference::firstOrCreate(
+            ['user_id' => $authUser->id],
+            UserPreference::defaultAttributes()
+        );
+
+        return $this->sendResponse($this->preferencePayload($pref), 'User preferences');
+    }
+
+    public function updatePreferences(Request $request)
+    {
+        $validated = $request->validate([
+            'generate_images' => 'sometimes|boolean',
+            'use_extra_memory_context' => 'sometimes|boolean',
+            'dismiss_memory_image_prompt' => 'sometimes|boolean',
+        ]);
+
+        $authUser = Auth::user();
+        $pref = UserPreference::firstOrCreate(
+            ['user_id' => $authUser->id],
+            UserPreference::defaultAttributes()
+        );
+        $pref->fill($validated);
+        $pref->save();
+
+        return $this->sendResponse($this->preferencePayload($pref), 'User preferences updated');
+    }
+
+    /**
+     * @return array{generate_images: bool, use_extra_memory_context: bool, dismiss_memory_image_prompt: bool}
+     */
+    private function preferencePayload(UserPreference $pref): array
+    {
+        return [
+            'generate_images' => (bool) $pref->generate_images,
+            'use_extra_memory_context' => (bool) $pref->use_extra_memory_context,
+            'dismiss_memory_image_prompt' => (bool) $pref->dismiss_memory_image_prompt,
+        ];
     }
 
     public function uploadAvatar(Request $request)

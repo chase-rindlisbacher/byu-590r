@@ -1,8 +1,9 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { Router, RouterModule, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from './core/stores/auth.store';
 import { UserStore } from './core/stores/user.store';
+import { UserPreferencesStore } from './core/stores/user-preferences.store';
 import { UserService } from './core/services/user.service';
 import {
   FormBuilder,
@@ -45,9 +46,10 @@ import { LoginComponent } from './auth/login/login.component';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
   private authStore = inject(AuthStore);
   protected userStore = inject(UserStore);
+  private userPreferencesStore = inject(UserPreferencesStore);
   private userService = inject(UserService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
@@ -73,13 +75,6 @@ export class AppComponent implements OnInit {
 
   private hasLoadedUser = signal(false);
 
-  shouldLoadUser = computed(() => {
-    const isAuthenticated = this.authStore.isAuthenticated();
-    const user = this.authStore.user();
-    const hasLoaded = this.hasLoadedUser();
-    return isAuthenticated && user && !hasLoaded;
-  });
-
   constructor() {
     this.changeEmailForm = this.fb.group({
       email: [
@@ -87,13 +82,19 @@ export class AppComponent implements OnInit {
         [Validators.required, Validators.minLength(3), Validators.email],
       ],
     });
-  }
 
-  ngOnInit(): void {
-    if (this.shouldLoadUser()) {
+    effect(() => {
+      const authed = this.authStore.isAuthenticated();
+      const user = this.authStore.user();
+      if (!authed || !user) {
+        return;
+      }
+      if (this.hasLoadedUser()) {
+        return;
+      }
       this.hasLoadedUser.set(true);
       this.getCurrentUser();
-    }
+    });
   }
 
   get isAuthenticated() {
@@ -119,6 +120,7 @@ export class AppComponent implements OnInit {
 
   logout(): void {
     this.hasLoadedUser.set(false);
+    this.userPreferencesStore.clear();
     this.authStore.logout();
     this.router.navigate(['/login']);
   }
@@ -141,6 +143,7 @@ export class AppComponent implements OnInit {
           this.showEmailNotVerifiedDialog.set(true);
         }
         this.userStore.setUser(response.results);
+        this.userPreferencesStore.load();
       },
       error: () => {
         this.logout();

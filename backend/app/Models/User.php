@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -15,6 +16,16 @@ class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+
+    protected static function booted(): void
+    {
+        static::created(function (User $user) {
+            UserPreference::firstOrCreate(
+                ['user_id' => $user->id],
+                UserPreference::defaultAttributes()
+            );
+        });
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -59,6 +70,11 @@ class User extends Authenticatable
     public function memories(): HasMany
     {
         return $this->hasMany(Memory::class);
+    }
+
+    public function userPreference(): HasOne
+    {
+        return $this->hasOne(UserPreference::class);
     }
 
     public function checkouts(): BelongsToMany
