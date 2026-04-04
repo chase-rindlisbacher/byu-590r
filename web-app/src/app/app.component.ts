@@ -136,9 +136,8 @@ export class AppComponent {
 
     this.userService.getUser().subscribe({
       next: (response) => {
-        if (response.results.avatar) {
-          this.authStore.updateAvatar(response.results.avatar);
-        }
+        // Always sync (including null) so we do not keep expired or wrong URLs in localStorage
+        this.authStore.updateAvatar(response.results.avatar ?? null);
         if (!response.results.email_verified_at) {
           this.showEmailNotVerifiedDialog.set(true);
         }

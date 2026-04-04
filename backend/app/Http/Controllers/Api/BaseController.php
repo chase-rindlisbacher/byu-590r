@@ -47,45 +47,35 @@ class BaseController extends Controller
             return null;
         }
 
-        // Local: serve from storage/app/public (e.g. demo images from backend/public/assets/books)
-        if ($this->useLocalStorageForImages()) {
-            if (Storage::disk('public')->exists($path)) {
-                return asset('storage/' . $path);
+        // Uploads may use the S3 disk even when FILESYSTEM_DISK is local; try S3 first
+        // when configured so we do not return null while the object only exists on S3.
+        $key = config('filesystems.disks.s3.key');
+        $bucket = config('filesystems.disks.s3.bucket');
+        if (! empty($key) && ! empty($bucket)) {
+            /** @var \Illuminate\Filesystem\FilesystemAdapter $s3 */
+            $s3 = Storage::disk('s3');
+            try {
+                if ($s3->exists($path)) {
+                    if ($minutes === null) {
+                        $s3->setVisibility($path, "public");
+                        // @phpstan-ignore-next-line - url() method exists on S3 adapter at runtime
+                        return $s3->url($path);
+                    }
+                    // @phpstan-ignore-next-line - temporaryUrl() method exists on S3 adapter at runtime
+                    return $s3->temporaryUrl($path, now()->addMinutes($minutes));
+                }
+            } catch (\Exception $e) {
+                Log::error('S3 URL generation failed: ' . $e->getMessage());
+                return null;
             }
-            return null;
         }
 
-        /** @var \Illuminate\Filesystem\FilesystemAdapter $s3 */
-        $s3 = Storage::disk('s3');
-        try {
-            if ($s3->exists($path)) {
-                if ($minutes === null) {
-                    $s3->setVisibility($path, "public");
-                    // @phpstan-ignore-next-line - url() method exists on S3 adapter at runtime
-                    return $s3->url($path);
-                }
-                // @phpstan-ignore-next-line - temporaryUrl() method exists on S3 adapter at runtime
-                return $s3->temporaryUrl($path, now()->addMinutes($minutes));
-            }
-        } catch (\Exception $e) {
-            Log::error('S3 URL generation failed: ' . $e->getMessage());
-            return null;
+        // Local: serve from storage/app/public (e.g. demo images) when not on S3
+        if (Storage::disk('public')->exists($path)) {
+            return asset('storage/' . $path);
         }
 
         return null;
-    }
-
-    /**
-     * Whether to resolve image URLs from local storage (public disk) instead of S3.
-     */
-    protected function useLocalStorageForImages(): bool
-    {
-        if (in_array(config('filesystems.default'), ['local', 'development', 'dev'], true)) {
-            return true;
-        }
-        $key = config('filesystems.disks.s3.key');
-        $bucket = config('filesystems.disks.s3.bucket');
-        return empty($key) || empty($bucket);
     }
 }
 
