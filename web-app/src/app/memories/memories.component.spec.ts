@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { MemoriesComponent } from './memories.component';
 import { MemoryService, Memory } from '../core/services/memory.service';
@@ -71,6 +73,8 @@ describe('MemoriesComponent', () => {
     await TestBed.configureTestingModule({
       imports: [MemoriesComponent],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: MemoryService, useValue: mockMemoryService },
         { provide: LocationService, useValue: mockLocationService },
         MemoryStore,
