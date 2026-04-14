@@ -128,4 +128,95 @@ describe('MemoriesComponent', () => {
     expect(compiled.textContent).toContain('Mar 16, 2026');
     expect(compiled.textContent).toContain('Aug 19, 2025');
   });
+
+  it('should open photo lightbox when a memory image is clicked', async () => {
+    const fixture = TestBed.createComponent(MemoriesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const img = fixture.nativeElement.querySelector(
+      '.memory-image'
+    ) as HTMLImageElement | null;
+    expect(img).toBeTruthy();
+    img!.click();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('.photo-lightbox')
+    ).toBeTruthy();
+    expect(fixture.componentInstance.expandedMemoryMedia()).not.toBeNull();
+  });
+
+  it('should close photo lightbox when backdrop is clicked', async () => {
+    const fixture = TestBed.createComponent(MemoriesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const img = fixture.nativeElement.querySelector(
+      '.memory-image'
+    ) as HTMLImageElement;
+    img.click();
+    fixture.detectChanges();
+
+    const backdrop = fixture.nativeElement.querySelector(
+      '.photo-lightbox'
+    ) as HTMLElement;
+    expect(backdrop).toBeTruthy();
+    backdrop.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.expandedMemoryMedia()).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('.photo-lightbox')
+    ).toBeFalsy();
+  });
+
+  it('should close photo lightbox when expanded image is clicked', async () => {
+    const fixture = TestBed.createComponent(MemoriesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const thumb = fixture.nativeElement.querySelector(
+      '.memory-image'
+    ) as HTMLImageElement;
+    thumb.click();
+    fixture.detectChanges();
+
+    const expanded = fixture.nativeElement.querySelector(
+      '.photo-lightbox-image'
+    ) as HTMLImageElement;
+    expect(expanded).toBeTruthy();
+    expanded.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.expandedMemoryMedia()).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('.photo-lightbox')
+    ).toBeFalsy();
+  });
+
+  it('should close photo lightbox on document keydown', async () => {
+    const fixture = TestBed.createComponent(MemoriesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const img = fixture.nativeElement.querySelector(
+      '.memory-image'
+    ) as HTMLImageElement;
+    img.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.expandedMemoryMedia()).not.toBeNull();
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    );
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.expandedMemoryMedia()).toBeNull();
+  });
 });

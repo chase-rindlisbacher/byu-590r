@@ -1,4 +1,12 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  inject,
+  signal,
+  computed,
+  OnInit,
+  OnDestroy,
+} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import {
@@ -43,6 +51,8 @@ import {
 } from '../core/utils/memory-datetime.utils';
 import { isMobile } from '../core/utils/mobile.utils';
 
+const PHOTO_LIGHTBOX_BODY_CLASS = 'memories-photo-lightbox-open';
+
 @Component({
   selector: 'app-memories',
   standalone: true,
@@ -62,7 +72,7 @@ import { isMobile } from '../core/utils/mobile.utils';
   templateUrl: './memories.component.html',
   styleUrl: './memories.component.scss',
 })
-export class MemoriesComponent implements OnInit {
+export class MemoriesComponent implements OnInit, OnDestroy {
   private memoryService = inject(MemoryService);
   private locationService = inject(LocationService);
   private memoryStore = inject(MemoryStore);
@@ -125,6 +135,9 @@ export class MemoriesComponent implements OnInit {
    */
   aiImageGenerationAvailable = signal<boolean | null>(null);
 
+  /** When set, full-screen lightbox for viewing a memory photo. */
+  expandedMemoryMedia = signal<{ url: string; alt: string } | null>(null);
+
   /** True when the user has at least one photo on another memory (enables meaningful recent-photo context). */
   hasOtherMemoriesWithPhotosForAi = computed(() => {
     const offerId = this.aiImageOfferMemory()?.id;
@@ -162,6 +175,30 @@ export class MemoriesComponent implements OnInit {
       city: [''],
       zipcode: [''],
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.expandedMemoryMedia()) {
+      this.closeExpandedMemoryMedia();
+    }
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(_event: KeyboardEvent): void {
+    if (!this.expandedMemoryMedia()) {
+      return;
+    }
+    this.closeExpandedMemoryMedia();
+  }
+
+  openExpandedMemoryMedia(url: string, alt: string): void {
+    this.expandedMemoryMedia.set({ url, alt });
+    document.body.classList.add(PHOTO_LIGHTBOX_BODY_CLASS);
+  }
+
+  closeExpandedMemoryMedia(): void {
+    this.expandedMemoryMedia.set(null);
+    document.body.classList.remove(PHOTO_LIGHTBOX_BODY_CLASS);
   }
 
   ngOnInit(): void {

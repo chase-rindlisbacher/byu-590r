@@ -40,6 +40,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+body.memories-photo-lightbox-open {
+  overflow: hidden;
+}
+
 ::ng-deep {
   .error-snackbar {
     .mdc-snackbar__surface {

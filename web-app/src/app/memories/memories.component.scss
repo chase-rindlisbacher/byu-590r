@@ -348,6 +348,40 @@ mat-card-content {
   object-fit: contain;
   border-radius: spacing.$border-radius-small;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: spacing.$spacing-medium;
+  box-sizing: border-box;
+  background-color: rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+}
+
+.photo-lightbox-inner {
+  cursor: pointer;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-lightbox-image {
+  display: block;
+  max-width: min(100vw - #{spacing.$spacing-medium * 2}, 100%);
+  max-height: min(100vh - #{spacing.$spacing-medium * 2}, 100%);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: spacing.$border-radius-small;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .ai-media-badge {

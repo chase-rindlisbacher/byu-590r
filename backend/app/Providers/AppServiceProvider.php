@@ -25,7 +25,12 @@ class AppServiceProvider extends ServiceProvider
             // Schedule overdue books email - change frequency as needed (currently every minute for testing)
             $schedule->command('auto:overdue-books --email=johnchristiansen@gmail.com')
                 ->everyMinute();
-                // ->weekly(); // Uncomment for production
+            // ->weekly(); // Uncomment for production
+
+            // Weekly memories management report (full snapshot); recipient from config memories.master_list_email
+            $schedule->command('memories:master-list')
+                ->weeklyOn(1, '8:00')
+                ->timezone(config('app.timezone'));
         });
     }
 }

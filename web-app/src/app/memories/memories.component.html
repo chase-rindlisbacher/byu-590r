@@ -64,7 +64,21 @@
         <div class="memory-media">
           @for (m of memory.media; track m.id) {
           <div class="memory-media-item">
-            <img [src]="m.url" alt="Memory media" class="memory-image" />
+            <img
+              [src]="m.url"
+              alt="Memory media"
+              class="memory-image"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'View photo larger'"
+              (click)="openExpandedMemoryMedia(m.url, 'Memory photo')"
+              (keydown.enter)="
+                openExpandedMemoryMedia(m.url, 'Memory photo'); $event.preventDefault()
+              "
+              (keydown.space)="
+                openExpandedMemoryMedia(m.url, 'Memory photo'); $event.preventDefault()
+              "
+            />
             @if (m.is_ai_generated) {
             <span class="ai-media-badge" title="AI-generated image">AI</span>
             }
@@ -75,6 +89,24 @@
       </mat-card-content>
     </mat-card>
     }
+  </div>
+  }
+
+  @if (expandedMemoryMedia(); as media) {
+  <div
+    class="photo-lightbox"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Expanded memory photo"
+    (click)="closeExpandedMemoryMedia()"
+  >
+    <div class="photo-lightbox-inner">
+      <img
+        [src]="media.url"
+        [alt]="media.alt"
+        class="photo-lightbox-image"
+      />
+    </div>
   </div>
   }
 
