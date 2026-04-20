@@ -3,8 +3,8 @@
     <mat-card-header>
       <mat-card-title>Login Here</mat-card-title>
     </mat-card-header>
-    <mat-card-content>
-      <form [formGroup]="loginForm" (ngSubmit)="submitLogin()">
+    <form [formGroup]="loginForm" (ngSubmit)="submitLogin()">
+      <mat-card-content>
         <div class="input-container">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Email</mat-label>
@@ -28,20 +28,42 @@
             <mat-card-content>{{ errorMsg() }}</mat-card-content>
           </mat-card>
         }
-      </form>
-    </mat-card-content>
-    <mat-card-actions class="button-group">
-      <button mat-raised-button class="action-button" style="color: white;" type="submit" [disabled]="!loginForm.valid || isLoading()" (click)="submitLogin()">
-        @if (isLoading()) {
-          <mat-spinner diameter="20"></mat-spinner>
-          <span>Loading...</span>
-        } @else {
-          <span style="color: black;">Login Here</span>
-        }
-      </button>
-      <button mat-raised-button class="action-button" style="color: black;" (click)="passwordResetDialog.set(true)">Forgot Password</button>
-      <button mat-raised-button class="action-button" style="color: black;" (click)="registerDialog.set(true)">Register</button>
-    </mat-card-actions>
+      </mat-card-content>
+      <mat-card-actions class="button-group">
+        <button
+          mat-raised-button
+          class="action-button"
+          style="color: white"
+          type="submit"
+          [disabled]="!loginForm.valid || isLoading()"
+        >
+          @if (isLoading()) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Loading...</span>
+          } @else {
+            <span style="color: black">Login Here</span>
+          }
+        </button>
+        <button
+          mat-raised-button
+          class="action-button"
+          style="color: black"
+          type="button"
+          (click)="passwordResetDialog.set(true)"
+        >
+          Forgot Password
+        </button>
+        <button
+          mat-raised-button
+          class="action-button"
+          style="color: black"
+          type="button"
+          (click)="registerDialog.set(true)"
+        >
+          Register
+        </button>
+      </mat-card-actions>
+    </form>
   </mat-card>
 
   @if (passwordResetDialog()) {
