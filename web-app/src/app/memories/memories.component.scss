@@ -351,6 +351,11 @@ mat-card-content {
   cursor: pointer;
 }
 
+// Viewport-only caps (no % on img) + comfort margin so previews rarely feel edge-to-edge.
+$photo-lightbox-pad: spacing.$spacing-medium * 2;
+$photo-lightbox-max-w: 90vw;
+$photo-lightbox-max-h: 85vh;
+
 .photo-lightbox {
   position: fixed;
   inset: 0;
@@ -366,8 +371,11 @@ mat-card-content {
 
 .photo-lightbox-inner {
   cursor: pointer;
-  max-width: 100%;
-  max-height: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  max-width: min(100%, #{$photo-lightbox-max-w});
+  max-height: min(100%, #{$photo-lightbox-max-h});
   display: flex;
   align-items: center;
   justify-content: center;
@@ -375,11 +383,17 @@ mat-card-content {
 
 .photo-lightbox-image {
   display: block;
-  max-width: min(100vw - #{spacing.$spacing-medium * 2}, 100%);
-  max-height: min(100vh - #{spacing.$spacing-medium * 2}, 100%);
+  max-width: min(
+    #{$photo-lightbox-max-w},
+    calc(100vw - #{$photo-lightbox-pad})
+  );
+  max-height: min(
+    #{$photo-lightbox-max-h},
+    calc(100vh - #{$photo-lightbox-pad})
+  );
   width: auto;
   height: auto;
-  object-fit: contain;
+  object-fit: scale-down;
   border-radius: spacing.$border-radius-small;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
