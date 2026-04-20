@@ -18,11 +18,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--app-card-shadow);
   transition: box-shadow 0.2s ease-in-out;
 
   &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 8px var(--app-card-shadow-strong);
   }
 }
 .book-grid-tile {
@@ -55,16 +55,16 @@ mat-card-content {
   }
 
   &::-webkit-scrollbar-track {
-    background: colors.$colors-light-grey;
+    background: var(--app-scrollbar-track);
     border-radius: 3px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: colors.$colors-medium-grey;
+    background: var(--app-scrollbar-thumb);
     border-radius: 3px;
 
     &:hover {
-      background: colors.$colors-dark-grey;
+      background: var(--app-scrollbar-thumb-hover);
     }
   }
 }
@@ -92,13 +92,14 @@ mat-card-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--app-text-primary);
   @include fonts.fonts-h3;
 }
 
 .book-description {
   margin-bottom: spacing.$spacing-small;
   @include fonts.fonts-body;
-  color: colors.$colors-text-primary;
+  color: var(--app-text-primary);
   line-height: fonts.$line-height-normal;
 }
 
@@ -114,7 +115,7 @@ mat-card-title {
     min-width: auto;
     width: 100%;
     text-align: left;
-    color: colors.$colors-text-primary;
+    color: var(--app-text-primary);
     @include fonts.fonts-caption;
     font-weight: fonts.$font-weight-medium;
 
@@ -127,11 +128,11 @@ mat-card-title {
 
     strong {
       font-weight: fonts.$font-weight-medium;
-      color: colors.$colors-text-primary;
+      color: var(--app-text-primary);
     }
 
     &:hover {
-      background-color: colors.$colors-light-grey;
+      background-color: var(--app-surface-muted);
     }
   }
 
@@ -145,7 +146,7 @@ mat-card-title {
 
   li {
     margin-bottom: spacing.$spacing-extra-small;
-    color: colors.$colors-text-secondary;
+    color: var(--app-text-secondary);
     @include fonts.fonts-caption;
   }
 }
@@ -164,7 +165,7 @@ mat-card-title {
 .phones {
   margin-left: spacing.$spacing-small;
   font-size: fonts.$font-size-xs;
-  color: colors.$colors-text-secondary;
+  color: var(--app-text-secondary);
   margin-top: spacing.$spacing-extra-small;
 }
 
@@ -181,7 +182,7 @@ mat-card-title {
   width: auto;
   object-fit: contain;
   border-radius: spacing.$border-radius-small;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--app-card-shadow);
   display: block;
   margin: 0 auto;
 
@@ -192,7 +193,7 @@ mat-card-title {
 }
 
 .checked-out-label {
-  color: colors.$colors-error;
+  color: var(--app-danger-text);
   font-weight: fonts.$font-weight-semibold;
   @include fonts.fonts-caption;
   text-align: center;
@@ -201,7 +202,7 @@ mat-card-title {
 
 mat-card-content h3 {
   @include fonts.fonts-caption;
-  color: colors.$colors-text-primary;
+  color: var(--app-text-primary);
   text-align: center;
   margin: spacing.$spacing-small 0 0 0;
   font-weight: fonts.$font-weight-medium;
@@ -231,9 +232,9 @@ mat-card-content h3 {
 }
 
 .modal-content {
-  background-color: colors.$colors-surface;
-  color: colors.$colors-text-primary;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  background-color: var(--app-surface);
+  color: var(--app-text-primary);
+  box-shadow: 0 10px 25px var(--app-card-shadow-strong);
 }
 
 .alert {
@@ -245,14 +246,14 @@ mat-card-content h3 {
 
 .alert-info {
   background-color: rgba(2, 136, 209, 0.15);
-  color: colors.$colors-info;
-  border: 1px solid colors.$colors-info;
+  color: var(--app-info-text);
+  border: 1px solid var(--app-info-border);
 }
 
 .alert-danger {
-  background-color: rgba(211, 47, 47, 0.15);
-  color: colors.$colors-error;
-  border: 1px solid colors.$colors-error;
+  background-color: var(--app-danger-surface);
+  color: var(--app-danger-text);
+  border: 1px solid var(--app-danger-border);
 }
 
 .full-width {
@@ -265,7 +266,7 @@ mat-card-content h3 {
 
 .file-input-label {
   display: block;
-  color: colors.$colors-text-primary;
+  color: var(--app-text-primary);
   margin-bottom: spacing.$spacing-extra-small;
   @include fonts.fonts-caption;
   font-weight: fonts.$font-weight-medium;
@@ -274,10 +275,10 @@ mat-card-content h3 {
 .file-input {
   width: 100%;
   padding: spacing.$spacing-small spacing.$spacing-medium;
-  border: 1px solid colors.$colors-border;
+  border: 1px solid var(--app-border);
   border-radius: spacing.$border-radius-small;
-  background-color: colors.$colors-white;
-  color: colors.$colors-text-primary;
+  background-color: var(--app-input-bg);
+  color: var(--app-text-primary);
   @include fonts.fonts-body;
   cursor: pointer;
 
@@ -292,7 +293,7 @@ mat-card-content h3 {
     border: none;
     border-radius: spacing.$border-radius-extra-small;
     background-color: colors.$colors-primary;
-    color: colors.$colors-white;
+    color: #ffffff;
     cursor: pointer;
     @include fonts.fonts-buttons;
     margin-right: spacing.$spacing-small;
@@ -305,7 +306,7 @@ mat-card-content h3 {
 }
 
 .file-input-error {
-  color: colors.$colors-error;
+  color: var(--app-danger-text);
   @include fonts.fonts-caption;
   margin-top: spacing.$spacing-extra-small;
   padding-left: spacing.$spacing-small;
@@ -313,34 +314,34 @@ mat-card-content h3 {
 
 ::ng-deep {
   .mat-mdc-card {
-    background-color: colors.$colors-surface !important;
-    color: colors.$colors-text-primary !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    background-color: var(--app-surface) !important;
+    color: var(--app-text-primary) !important;
+    box-shadow: 0 2px 4px var(--app-card-shadow) !important;
   }
 
   .mat-mdc-card-title,
   .mat-mdc-card-subtitle {
-    color: colors.$colors-text-primary !important;
+    color: var(--app-text-primary) !important;
     @include fonts.fonts-h3;
   }
 
   .mat-mdc-form-field {
     .mat-mdc-text-field-wrapper {
-      background-color: colors.$colors-white;
+      background-color: var(--app-input-bg);
     }
 
     .mat-mdc-form-field-label {
-      color: colors.$colors-text-secondary !important;
+      color: var(--app-text-secondary) !important;
       @include fonts.fonts-body;
     }
 
     .mat-mdc-input-element {
-      color: colors.$colors-text-primary !important;
+      color: var(--app-text-primary) !important;
       @include fonts.fonts-body;
     }
 
     .mat-mdc-form-field-error {
-      color: colors.$colors-error !important;
+      color: var(--app-danger-text) !important;
       @include fonts.fonts-caption;
     }
   }

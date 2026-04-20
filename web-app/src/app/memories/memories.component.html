@@ -25,7 +25,7 @@
   </div>
   } @else {
   <div class="memories-list">
-    @for (memory of memories(); track memory.id) {
+    @for (memory of memories(); track memory.id; let memIndex = $index) {
     <mat-card class="memory-card">
       <mat-card-header>
         <mat-card-title class="memory-date">{{
@@ -62,15 +62,28 @@
         <p class="memory-journal">{{ memory.journal_entry }}</p>
         @if (memory.media && memory.media.length > 0) {
         <div class="memory-media">
-          @for (m of memory.media; track m.id) {
+          @for (m of memory.media; track m.id; let mediaIndex = $index) {
           <div class="memory-media-item">
             <img
               [src]="m.url"
               alt="Memory media"
               class="memory-image"
+              decoding="async"
+              [attr.loading]="
+                memIndex === 0 && mediaIndex === 0 ? 'eager' : 'lazy'
+              "
+              [attr.fetchpriority]="
+                memIndex === 0 && mediaIndex === 0 ? 'high' : undefined
+              "
               tabindex="0"
               role="button"
               [attr.aria-label]="'View photo larger'"
+              (load)="
+                onMemoryImageReveal($event, 'memory-image--loaded')
+              "
+              (error)="
+                onMemoryImageReveal($event, 'memory-image--loaded')
+              "
               (click)="openExpandedMemoryMedia(m.url, 'Memory photo')"
               (keydown.enter)="
                 openExpandedMemoryMedia(m.url, 'Memory photo'); $event.preventDefault()
@@ -105,6 +118,8 @@
         [src]="media.url"
         [alt]="media.alt"
         class="photo-lightbox-image"
+        fetchpriority="high"
+        decoding="async"
       />
     </div>
   </div>
@@ -421,12 +436,21 @@
               <p class="field-hint">No photos attached yet.</p>
               } @else {
               <div class="media-grid-edit">
-                @for (m of editMediaSorted(); track m.id) {
+                @for (m of editMediaSorted(); track m.id; let thumbIndex = $index) {
                 <div
                   class="media-tile"
                   [class.media-tile--pending-remove]="isPendingMediaRemoval(m.id)"
                 >
-                  <img [src]="m.url" alt="" class="media-thumb" />
+                  <img
+                    [src]="m.url"
+                    alt=""
+                    class="media-thumb"
+                    decoding="async"
+                    loading="lazy"
+                    [attr.fetchpriority]="thumbIndex < 4 ? 'high' : undefined"
+                    (load)="onMemoryImageReveal($event, 'media-thumb--loaded')"
+                    (error)="onMemoryImageReveal($event, 'media-thumb--loaded')"
+                  />
                   @if (m.is_ai_generated) {
                   <span class="ai-media-badge ai-media-badge--tile" title="AI-generated"
                     >AI</span

@@ -201,6 +201,19 @@ export class MemoriesComponent implements OnInit, OnDestroy {
     document.body.classList.remove(PHOTO_LIGHTBOX_BODY_CLASS);
   }
 
+  /**
+   * Soft fade-in for remote images once loaded (see component SCSS).
+   */
+  onMemoryImageReveal(
+    event: Event,
+    loadedClass: 'memory-image--loaded' | 'media-thumb--loaded',
+  ): void {
+    const t = event.target;
+    if (t instanceof HTMLImageElement) {
+      t.classList.add(loadedClass);
+    }
+  }
+
   ngOnInit(): void {
     this.memoryService.getBackendHealth().subscribe({
       next: (h) => {

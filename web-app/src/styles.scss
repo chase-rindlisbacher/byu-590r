@@ -2,6 +2,7 @@
 @use "./assets/styles/colors" as colors;
 @use "./assets/styles/spacing" as spacing;
 @use "./assets/styles/fonts" as fonts;
+@use "./assets/styles/semantic-theme";
 
 html {
   @include mat.theme(
@@ -30,8 +31,8 @@ body {
 }
 
 body {
-  background-color: colors.$colors-background;
-  color: colors.$colors-text-primary;
+  background-color: var(--app-bg-body);
+  color: var(--app-text-primary);
   font-family: fonts.$main-typography;
   font-size: fonts.$font-size-base;
   line-height: fonts.$line-height-normal;
@@ -40,18 +41,65 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-// Match <html data-theme="…"> set from AppComponent so overscroll / rubber-band
-// matches the app shell (default theme is dark in app).
-html[data-theme='dark'] body {
-  background-color: #131211;
-}
-
-html[data-theme='light'] body {
-  background-color: #ebe7e0;
-}
+// Background + text come from --app-* on html[data-theme] (semantic-theme).
 
 body.memories-photo-lightbox-open {
   overflow: hidden;
+}
+
+// Material + list: align with semantic tokens in both modes (cards are often white from Material defaults).
+html[data-theme='dark'] {
+  .mat-mdc-card {
+    --mdc-elevated-card-container-color: var(--app-surface);
+    --mat-card-elevated-container-color: var(--app-surface);
+    background-color: var(--app-surface) !important;
+    color: var(--app-text-primary) !important;
+  }
+
+  .mat-mdc-card-header .mat-mdc-card-title,
+  .mat-mdc-card-title,
+  .mat-mdc-card-subtitle {
+    color: var(--app-text-primary) !important;
+  }
+
+  .mat-mdc-list-item .mdc-list-item__primary-text,
+  .mat-mdc-list-item .mat-mdc-list-item-title {
+    color: var(--app-text-primary) !important;
+  }
+
+  .mat-mdc-slide-toggle .mdc-form-field,
+  .mat-internal-form-field,
+  .mdc-label {
+    color: var(--app-text-primary);
+  }
+
+  .mat-mdc-checkbox .mdc-form-field,
+  .mat-mdc-radio-button .mdc-form-field {
+    color: var(--app-text-primary);
+  }
+
+  .mat-mdc-form-field {
+    --mat-form-field-label-text-color: var(--app-text-secondary);
+    --mat-form-field-outlined-input-text-color: var(--app-text-primary);
+  }
+
+  .mat-mdc-snack-bar-container.mat-mdc-snack-bar-container {
+    --mat-snack-bar-container-color: var(--app-surface-elevated);
+    --mat-snack-bar-supporting-text-color: var(--app-text-primary);
+  }
+}
+
+html[data-theme='light'] {
+  .mat-mdc-card {
+    --mdc-elevated-card-container-color: var(--app-surface);
+    background-color: var(--app-surface) !important;
+    color: var(--app-text-primary) !important;
+  }
+
+  .mat-mdc-card-header .mat-mdc-card-title,
+  .mat-mdc-card-title {
+    color: var(--app-text-primary) !important;
+  }
 }
 
 ::ng-deep {

@@ -7,25 +7,25 @@
   
   h2 {
     @include fonts.fonts-h2;
-    color: colors.$colors-text-primary;
+    color: var(--app-text-primary);
     margin-bottom: spacing.$spacing-medium;
   }
 
   p {
     @include fonts.fonts-body;
-    color: colors.$colors-text-primary;
+    color: var(--app-text-primary);
   }
 }
 
 ::ng-deep {
   .mat-mdc-card {
-    background-color: colors.$colors-surface !important;
-    color: colors.$colors-text-primary !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    background-color: var(--app-surface) !important;
+    color: var(--app-text-primary) !important;
+    box-shadow: 0 2px 4px var(--app-card-shadow) !important;
   }
-  
+
   .mat-mdc-list-item {
-    color: colors.$colors-text-primary !important;
+    color: var(--app-text-primary) !important;
     @include fonts.fonts-body;
   }
 }

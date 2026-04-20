@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { afterNextRender, Component, HostBinding, inject, signal } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -55,6 +55,16 @@ export class LoginComponent {
   submitForgotPasswordLoading = signal(false);
   registerFormIsLoading = signal(false);
 
+  /** Optimized WebP (~max 1920px wide); fades in when decoded (see login SCSS). */
+  private static readonly LOGIN_BG_URL = '/Peaceful_Background_Journaling.webp';
+
+  private loginBackgroundReady = signal(false);
+
+  @HostBinding('class.login-bg-ready')
+  get loginBackgroundReadyClass(): boolean {
+    return this.loginBackgroundReady();
+  }
+
   constructor() {
     this.loginForm = this.fb.group({
       email: [
@@ -82,6 +92,15 @@ export class LoginComponent {
         '',
         [Validators.required, Validators.minLength(3), Validators.email],
       ],
+    });
+
+    afterNextRender(() => {
+      const img = new Image();
+      img.decoding = 'async';
+      const done = (): void => this.loginBackgroundReady.set(true);
+      img.onload = done;
+      img.onerror = done;
+      img.src = LoginComponent.LOGIN_BG_URL;
     });
   }
 

@@ -5,7 +5,7 @@
 
 .app-container {
   min-height: 100vh;
-  color: colors.$colors-text-primary;
+  color: var(--app-text-primary);
   @include fonts.fonts-body;
 
   &.theme-light {
@@ -90,7 +90,7 @@
 
   h3 {
     margin: 0;
-    color: colors.$colors-text-primary;
+    color: var(--app-text-primary);
     @include fonts.fonts-h3;
   }
 }
@@ -116,20 +116,20 @@
   position: relative;
   width: 90%;
   max-width: 500px;
-  background-color: colors.$colors-surface;
+  background-color: var(--app-surface);
   border-radius: spacing.$border-radius-medium;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 25px var(--app-card-shadow-strong);
 }
 
 .modal-content {
-  background-color: colors.$colors-surface;
+  background-color: var(--app-surface);
   border-radius: spacing.$border-radius-medium;
-  color: colors.$colors-text-primary;
+  color: var(--app-text-primary);
 }
 
 .modal-header {
   padding: spacing.$spacing-medium;
-  border-bottom: 1px solid colors.$colors-divider;
+  border-bottom: 1px solid var(--app-divider);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -137,12 +137,12 @@
   h2 {
     margin: 0;
     @include fonts.fonts-h3;
-    color: colors.$colors-text-primary;
+    color: var(--app-text-primary);
   }
 }
 
 .modal-subtitle {
-  color: colors.$colors-text-secondary;
+  color: var(--app-text-secondary);
   margin-bottom: spacing.$spacing-medium;
   @include fonts.fonts-body;
 }
@@ -166,7 +166,7 @@
   font-size: 200px;
   width: 200px;
   height: 200px;
-  color: colors.$colors-medium-grey;
+  color: var(--app-text-secondary);
 }
 
 .file-input-container {
@@ -194,34 +194,34 @@
 }
 
 .alert-success {
-  background-color: rgba(46, 125, 50, 0.15);
-  color: colors.$colors-success;
-  border: 1px solid colors.$colors-success;
+  background-color: var(--app-success-surface);
+  color: var(--app-success-text);
+  border: 1px solid var(--app-success-border);
   border-radius: spacing.$border-radius-small;
 }
 
 ::ng-deep {
   .mat-mdc-dialog-container {
-    background-color: colors.$colors-surface !important;
-    color: colors.$colors-text-primary !important;
+    background-color: var(--app-surface) !important;
+    color: var(--app-text-primary) !important;
   }
 
   .mat-mdc-dialog-title {
-    color: colors.$colors-text-primary !important;
+    color: var(--app-text-primary) !important;
     @include fonts.fonts-h3;
   }
 
   .mat-mdc-menu-panel {
-    background-color: colors.$colors-surface !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: var(--app-surface) !important;
+    box-shadow: 0 4px 12px var(--app-card-shadow-strong);
   }
 
   .mat-mdc-menu-item {
-    color: colors.$colors-text-primary !important;
+    color: var(--app-text-primary) !important;
     @include fonts.fonts-body;
 
     &:hover {
-      background-color: colors.$colors-light-grey !important;
+      background-color: var(--app-menu-hover) !important;
     }
   }
 
@@ -229,16 +229,16 @@
     width: 100%;
 
     .mat-mdc-text-field-wrapper {
-      background-color: colors.$colors-white;
+      background-color: var(--app-input-bg);
     }
 
     .mat-mdc-form-field-label {
-      color: colors.$colors-text-secondary !important;
+      color: var(--app-text-secondary) !important;
       @include fonts.fonts-body;
     }
 
     .mat-mdc-input-element {
-      color: colors.$colors-text-primary !important;
+      color: var(--app-text-primary) !important;
       @include fonts.fonts-body;
     }
 

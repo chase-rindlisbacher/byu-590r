@@ -11,17 +11,40 @@
   min-height: 100vh;
 }
 
+// Fallback while the photo loads (calm neutral; matches peaceful background mood).
 :host::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-color: colors.$colors-dark-grey;
-  background-image: url('/Background_Img_Outdoors.png');
+  background: linear-gradient(
+    165deg,
+    #1c2128 0%,
+    #2a3240 50%,
+    #1a1f24 100%
+  );
+}
+
+:host::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.55s ease;
+  background-image: image-set(
+    url('/Peaceful_Background_Journaling.webp') type('image/webp'),
+    url('/Peaceful_Background_Journaling.png') type('image/png')
+  );
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
+}
+
+:host.login-bg-ready::after {
+  opacity: 1;
 }
 
 .login-page-content {
@@ -35,6 +58,17 @@
   box-sizing: border-box;
 }
 
+// theme-* classes live on ancestor .app-container (see AppComponent).
+:host-context(.theme-dark) .login-box {
+  background-color: rgba(33, 33, 33, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:host-context(.theme-light) .login-box {
+  background-color: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 .login-box {
   width: 100vw;
   height: 100vh;
@@ -42,14 +76,12 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: rgba(33, 33, 33, 0.5);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px var(--app-card-shadow), 0 2px 4px var(--app-card-shadow);
   row-gap: spacing.$spacing-medium-large;
   padding: spacing.$spacing-medium-large;
   border-radius: spacing.$border-radius-medium;
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 @media screen and (min-width: 769px) {
@@ -64,6 +96,14 @@
     width: 500px;
     height: unset;
   }
+}
+
+:host-context(.theme-dark) .button-group {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+:host-context(.theme-light) .button-group {
+  background-color: rgba(0, 0, 0, 0.06);
 }
 
 .input-container {
@@ -84,7 +124,6 @@
   justify-content: center;
   align-items: stretch;
   gap: 1em;
-  background-color: rgba(255, 255, 255, 0.08);
   border-radius: spacing.$border-radius-medium;
 }
 
@@ -102,9 +141,9 @@
 }
 
 .alert-danger {
-  background-color: rgba(211, 47, 47, 0.15);
-  color: #ffcdd2;
-  border: 1px solid colors.$colors-error;
+  background-color: var(--app-danger-surface);
+  color: var(--app-danger-text);
+  border: 1px solid var(--app-danger-border);
   border-radius: spacing.$border-radius-small;
   padding: spacing.$spacing-small spacing.$spacing-medium;
 }
@@ -129,8 +168,8 @@
 }
 
 .modal-content {
-  background-color: colors.$colors-charcoal;
-  color: colors.$colors-white;
+  background-color: var(--app-surface-elevated);
+  color: var(--app-text-primary);
   border-radius: spacing.$border-radius-medium;
 }
 
@@ -138,63 +177,92 @@
   width: 100%;
 }
 
-::ng-deep {
+// Login card: frosted glass tuned per theme.
+:host-context(.theme-dark) ::ng-deep {
   .login-box.mat-mdc-card {
-    background-color: rgba(33, 33, 33, 0.5) !important;
-    color: colors.$colors-white !important;
+    background-color: rgba(33, 33, 33, 0.52) !important;
+    color: #ffffff !important;
   }
 
   .login-box .mat-mdc-form-field .mat-mdc-text-field-wrapper {
-    background-color: rgba(45, 45, 45, 0.85) !important;
+    background-color: rgba(45, 45, 45, 0.88) !important;
     backdrop-filter: blur(8px);
   }
 
-  .mat-mdc-card:not(.login-box):not(.alert) {
-    background-color: colors.$colors-charcoal !important;
-    color: colors.$colors-white !important;
-  }
-  
-  .mat-mdc-card-title,
-  .mat-mdc-card-subtitle {
-    color: colors.$colors-white !important;
-    @include fonts.fonts-h3;
-  }
-  
-  .mat-mdc-form-field {
-    .mat-mdc-text-field-wrapper {
-      background-color: colors.$colors-dark-grey;
-    }
-    
-    .mat-mdc-form-field-label {
-      color: colors.$colors-white !important;
-      @include fonts.fonts-body;
-    }
-    
+  .login-box .mat-mdc-form-field {
+    .mat-mdc-form-field-label,
     .mat-mdc-input-element {
-      color: colors.$colors-white !important;
-      @include fonts.fonts-body;
+      color: #ffffff !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
     }
+
+    .mat-mdc-form-field-error {
+      color: #ffcdd2 !important;
+      @include fonts.fonts-caption;
+    }
+  }
+}
+
+:host-context(.theme-light) ::ng-deep {
+  .login-box.mat-mdc-card {
+    background-color: rgba(255, 255, 255, 0.82) !important;
+    color: var(--app-text-primary) !important;
+  }
+
+  .login-box .mat-mdc-form-field .mat-mdc-text-field-wrapper {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(8px);
   }
 
   .login-box .mat-mdc-form-field {
-    .mat-mdc-form-field-label {
-      color: colors.$colors-white !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-    }
-    
+    .mat-mdc-form-field-label,
     .mat-mdc-input-element {
-      color: colors.$colors-white !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      color: var(--app-text-primary) !important;
+      text-shadow: none;
     }
-    
+
     .mat-mdc-form-field-error {
       color: colors.$colors-error !important;
       @include fonts.fonts-caption;
     }
   }
-  
+}
+
+::ng-deep {
+  .mat-mdc-card:not(.login-box):not(.alert) {
+    background-color: var(--app-surface-elevated) !important;
+    color: var(--app-text-primary) !important;
+  }
+
+  .mat-mdc-card-title,
+  .mat-mdc-card-subtitle {
+    color: var(--app-text-primary) !important;
+    @include fonts.fonts-h3;
+  }
+
+  .mat-mdc-form-field {
+    .mat-mdc-text-field-wrapper {
+      background-color: var(--app-input-bg);
+    }
+
+    .mat-mdc-form-field-label {
+      color: var(--app-text-secondary) !important;
+      @include fonts.fonts-body;
+    }
+
+    .mat-mdc-input-element {
+      color: var(--app-text-primary) !important;
+      @include fonts.fonts-body;
+    }
+
+    .mat-mdc-form-field-error {
+      color: var(--app-danger-text) !important;
+      @include fonts.fonts-caption;
+    }
+  }
+
   .mat-mdc-snack-bar-container {
-    background-color: colors.$colors-charcoal !important;
-    color: colors.$colors-white !important;
+    background-color: var(--app-surface-elevated) !important;
+    color: var(--app-text-primary) !important;
   }
 }

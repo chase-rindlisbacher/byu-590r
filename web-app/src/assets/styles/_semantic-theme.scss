@@ -1,0 +1,76 @@
+// Theme tokens on html (set via data-theme in AppComponent). Overlays inherit from document.
+html[data-theme='light'] {
+  color-scheme: light;
+
+  --app-bg-body: #ebe7e0;
+
+  --app-text-primary: #161514;
+  --app-text-secondary: #55524e;
+
+  --app-surface: #ffffff;
+  --app-surface-elevated: #faf9f7;
+  --app-surface-muted: #ebe8e3;
+
+  --app-border: #ccc7bf;
+  --app-divider: #ccc7bf;
+
+  --app-muted-bg: rgba(0, 0, 0, 0.05);
+  --app-menu-hover: rgba(0, 0, 0, 0.07);
+  --app-input-bg: #ffffff;
+
+  --app-scrollbar-track: #e3dfd8;
+  --app-scrollbar-thumb: #a39e96;
+  --app-scrollbar-thumb-hover: #726d67;
+
+  --app-danger-text: #b71c1c;
+  --app-danger-border: #d32f2f;
+  --app-danger-surface: rgba(211, 47, 47, 0.12);
+
+  --app-success-text: #1b5e20;
+  --app-success-border: #2e7d32;
+  --app-success-surface: rgba(46, 125, 50, 0.12);
+
+  --app-info-text: #0277bd;
+  --app-info-border: #0288d1;
+
+  --app-card-shadow: rgba(0, 0, 0, 0.1);
+  --app-card-shadow-strong: rgba(0, 0, 0, 0.16);
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --app-bg-body: #131211;
+
+  --app-text-primary: #f2f0ec;
+  --app-text-secondary: #b5b1a9;
+
+  --app-surface: #252220;
+  --app-surface-elevated: #2f2c29;
+  --app-surface-muted: #3a3734;
+
+  --app-border: #524e49;
+  --app-divider: #524e49;
+
+  --app-muted-bg: rgba(255, 255, 255, 0.08);
+  --app-menu-hover: rgba(255, 255, 255, 0.12);
+  --app-input-bg: #1c1a18;
+
+  --app-scrollbar-track: #363330;
+  --app-scrollbar-thumb: #7a756e;
+  --app-scrollbar-thumb-hover: #9a948b;
+
+  --app-danger-text: #ffb4ab;
+  --app-danger-border: #ff8a80;
+  --app-danger-surface: rgba(255, 82, 82, 0.16);
+
+  --app-success-text: #b9f6ca;
+  --app-success-border: #66bb6a;
+  --app-success-surface: rgba(102, 187, 106, 0.18);
+
+  --app-info-text: #81d4fa;
+  --app-info-border: #4fc3f7;
+
+  --app-card-shadow: rgba(0, 0, 0, 0.45);
+  --app-card-shadow-strong: rgba(0, 0, 0, 0.6);
+}
