@@ -1,5 +1,11 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { Router, RouterModule, RouterOutlet } from '@angular/router';
+import {
+  Router,
+  RouterModule,
+  RouterOutlet,
+  NavigationEnd,
+} from '@angular/router';
+import { filter } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from './core/stores/auth.store';
 import { UserStore } from './core/stores/user.store';
@@ -52,6 +58,9 @@ export class AppComponent {
   private userPreferencesStore = inject(UserPreferencesStore);
   private userService = inject(UserService);
   private router = inject(Router);
+
+  /** Shell accent: slightly different ruled spacing on Home vs Memories (same palette). */
+  shellRoute = signal<'home' | 'memories' | 'default'>('default');
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
 
@@ -81,6 +90,25 @@ export class AppComponent {
         '',
         [Validators.required, Validators.minLength(3), Validators.email],
       ],
+    });
+
+    const syncShellRoute = (): void => {
+      const path = this.router.url.split('?')[0] ?? '';
+      if (path.includes('/memories')) {
+        this.shellRoute.set('memories');
+      } else if (path.includes('/home')) {
+        this.shellRoute.set('home');
+      } else {
+        this.shellRoute.set('default');
+      }
+    };
+    syncShellRoute();
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(() => syncShellRoute());
+
+    effect(() => {
+      document.documentElement.setAttribute('data-theme', this.theme());
     });
 
     effect(() => {

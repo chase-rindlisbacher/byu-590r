@@ -40,6 +40,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+// Match <html data-theme="…"> set from AppComponent so overscroll / rubber-band
+// matches the app shell (default theme is dark in app).
+html[data-theme='dark'] body {
+  background-color: #131211;
+}
+
+html[data-theme='light'] body {
+  background-color: #ebe7e0;
+}
+
 body.memories-photo-lightbox-open {
   overflow: hidden;
 }

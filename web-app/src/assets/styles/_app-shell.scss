@@ -1,0 +1,127 @@
+// Soft, cozy shell backgrounds (no ruled paper): warm layered gradients, light/dark + route accents.
+
+@mixin app-shell-light-default {
+  background-color: #ebe7e0;
+  background-image:
+    radial-gradient(
+      ellipse 120% 85% at 50% -15%,
+      rgba(255, 252, 247, 0.95) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 90% 55% at 95% 90%,
+      rgba(215, 200, 182, 0.4) 0%,
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 5% 75%,
+      rgba(195, 210, 220, 0.18) 0%,
+      transparent 48%
+    );
+  background-attachment: fixed;
+}
+
+@mixin app-shell-light-home {
+  background-color: #ede9e2;
+  background-image:
+    radial-gradient(
+      ellipse 110% 80% at 45% -10%,
+      rgba(255, 250, 242, 0.98) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 85% 55% at 100% 85%,
+      rgba(220, 205, 188, 0.38) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 65% 45% at 15% 70%,
+      rgba(200, 215, 228, 0.15) 0%,
+      transparent 45%
+    );
+  background-attachment: fixed;
+}
+
+@mixin app-shell-light-memories {
+  background-color: #e8e6e1;
+  background-image:
+    radial-gradient(
+      ellipse 100% 75% at 50% -12%,
+      rgba(248, 244, 238, 0.9) 0%,
+      transparent 56%
+    ),
+    radial-gradient(
+      ellipse 95% 60% at 0% 100%,
+      rgba(210, 200, 190, 0.35) 0%,
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 75% 55% at 100% 40%,
+      rgba(188, 200, 215, 0.2) 0%,
+      transparent 48%
+    );
+  background-attachment: fixed;
+}
+
+@mixin app-shell-dark-default {
+  background-color: #131211;
+  background-image:
+    radial-gradient(
+      ellipse 110% 75% at 50% -10%,
+      rgba(42, 40, 52, 0.55) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 85% 55% at 100% 95%,
+      rgba(55, 42, 36, 0.42) 0%,
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 70% 48% at 0% 35%,
+      rgba(32, 48, 58, 0.28) 0%,
+      transparent 50%
+    );
+  background-attachment: fixed;
+}
+
+@mixin app-shell-dark-home {
+  background-color: #141312;
+  background-image:
+    radial-gradient(
+      ellipse 115% 80% at 48% -8%,
+      rgba(48, 46, 58, 0.48) 0%,
+      transparent 56%
+    ),
+    radial-gradient(
+      ellipse 80% 52% at 95% 88%,
+      rgba(58, 45, 38, 0.38) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 68% 50% at 10% 72%,
+      rgba(36, 52, 62, 0.22) 0%,
+      transparent 48%
+    );
+  background-attachment: fixed;
+}
+
+@mixin app-shell-dark-memories {
+  background-color: #11100f;
+  background-image:
+    radial-gradient(
+      ellipse 105% 72% at 50% -8%,
+      rgba(40, 38, 50, 0.5) 0%,
+      transparent 57%
+    ),
+    radial-gradient(
+      ellipse 90% 58% at 0% 92%,
+      rgba(52, 40, 34, 0.4) 0%,
+      transparent 53%
+    ),
+    radial-gradient(
+      ellipse 72% 52% at 100% 30%,
+      rgba(28, 44, 55, 0.26) 0%,
+      transparent 49%
+    );
+  background-attachment: fixed;
+}

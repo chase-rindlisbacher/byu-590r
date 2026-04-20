@@ -1,16 +1,36 @@
 @use "../assets/styles/colors" as colors;
 @use "../assets/styles/spacing" as spacing;
 @use "../assets/styles/fonts" as fonts;
+@use "../assets/styles/app-shell" as app-shell;
 
 .app-container {
   min-height: 100vh;
-  background-color: colors.$colors-background;
   color: colors.$colors-text-primary;
-  background-image: url('https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnQ2OWVpcTl0N3h3NXBzdnF3eHdxcDljcWc0cGYxbHFmaHBrNThiZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/4Cpgf1zzMMy4w/giphy.gif');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   @include fonts.fonts-body;
+
+  &.theme-light {
+    @include app-shell.app-shell-light-default;
+
+    &.app-shell--home {
+      @include app-shell.app-shell-light-home;
+    }
+
+    &.app-shell--memories {
+      @include app-shell.app-shell-light-memories;
+    }
+  }
+
+  &.theme-dark {
+    @include app-shell.app-shell-dark-default;
+
+    &.app-shell--home {
+      @include app-shell.app-shell-dark-home;
+    }
+
+    &.app-shell--memories {
+      @include app-shell.app-shell-dark-memories;
+    }
+  }
 }
 
 .app-bar {
@@ -76,7 +96,7 @@
 }
 
 .app-main {
-  padding: spacing.$spacing-large;
+  padding: spacing.$spacing-medium spacing.$spacing-large spacing.$spacing-large;
 }
 
 .modal {

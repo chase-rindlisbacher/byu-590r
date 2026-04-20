@@ -2,13 +2,14 @@
   class="app-container"
   [class.theme-dark]="theme() === 'dark'"
   [class.theme-light]="theme() === 'light'"
+  [class.app-shell--home]="shellRoute() === 'home'"
+  [class.app-shell--memories]="shellRoute() === 'memories'"
 >
   @if (isAuthenticated) {
   <mat-toolbar color="primary" class="app-bar">
     <span class="app-bar-spacer"></span>
     <div class="nav-buttons">
       <a mat-button routerLink="/home" routerLinkActive="active">Home</a>
-      <a mat-button routerLink="/books" routerLinkActive="active">Books</a>
       <a mat-button routerLink="/memories" routerLinkActive="active">Memories</a>
     </div>
 

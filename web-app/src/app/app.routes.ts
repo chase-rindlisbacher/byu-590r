@@ -15,12 +15,6 @@ export const routes: Routes = [
       import('./auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
-    path: 'books',
-    loadComponent: () =>
-      import('./books/books.component').then((m) => m.BooksComponent),
-    canActivate: [authGuard],
-  },
-  {
     path: 'memories',
     loadComponent: () =>
       import('./memories/memories.component').then((m) => m.MemoriesComponent),

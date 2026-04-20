@@ -3,7 +3,8 @@
 @use "../../assets/styles/fonts" as fonts;
 
 .memories-container {
-  padding: spacing.$spacing-large;
+  // Horizontal inset comes from .app-main; avoid doubling top padding under the toolbar.
+  padding: 0 0 spacing.$spacing-large;
 }
 
 .buttons-row {
