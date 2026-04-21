@@ -1,6 +1,7 @@
 @use '../../../assets/styles/colors' as colors;
 @use '../../../assets/styles/spacing' as spacing;
 @use '../../../assets/styles/fonts' as fonts;
+@use '../../../assets/styles/breakpoints' as bp;
 
 // Login sits inside `main.app-main`, which has padding, so a background on the
 // inner wrapper never reaches the viewport edges. A fixed layer covers the full
@@ -54,7 +55,9 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
@@ -70,8 +73,12 @@
 }
 
 .login-box {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -81,12 +88,18 @@
   box-shadow: 0 4px 6px var(--app-card-shadow), 0 2px 4px var(--app-card-shadow);
   row-gap: spacing.$spacing-medium-large;
   padding: spacing.$spacing-medium-large;
+  padding-left: max(spacing.$spacing-medium-large, env(safe-area-inset-left, 0px));
+  padding-right: max(spacing.$spacing-medium-large, env(safe-area-inset-right, 0px));
+  padding-top: max(spacing.$spacing-medium-large, env(safe-area-inset-top, 0px));
+  padding-bottom: max(spacing.$spacing-medium-large, env(safe-area-inset-bottom, 0px));
   border-radius: spacing.$border-radius-medium;
 }
 
 @media screen and (min-width: 769px) {
   .login-box {
     width: 750px;
+    max-width: 100%;
+    min-height: unset;
     height: 50vh;
   }
 }
@@ -154,6 +167,9 @@
   left: 0;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   background-color: rgba(0, 0, 0, 0.7);
   z-index: 1000;
   display: flex;
@@ -264,5 +280,22 @@
   .mat-mdc-snack-bar-container {
     background-color: var(--app-surface-elevated) !important;
     color: var(--app-text-primary) !important;
+  }
+
+  .modal-content .mat-mdc-card-actions {
+    flex-wrap: wrap;
+    gap: spacing.$spacing-small;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: bp.$stack-dialog-actions-max) {
+  :host ::ng-deep .modal-content .mat-mdc-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .mat-mdc-button-base {
+      width: 100%;
+    }
   }
 }

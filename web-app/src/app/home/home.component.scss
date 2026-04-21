@@ -1,10 +1,15 @@
 @use '../../assets/styles/colors' as colors;
 @use '../../assets/styles/spacing' as spacing;
 @use '../../assets/styles/fonts' as fonts;
+@use '../../assets/styles/breakpoints' as bp;
 
 .home-container {
   padding: spacing.$spacing-large;
-  
+
+  @media (max-width: bp.$handset-max) {
+    padding: spacing.$spacing-small 0;
+  }
+
   h2 {
     @include fonts.fonts-h2;
     color: var(--app-text-primary);

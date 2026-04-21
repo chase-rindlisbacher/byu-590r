@@ -2,6 +2,7 @@
 @use "../assets/styles/spacing" as spacing;
 @use "../assets/styles/fonts" as fonts;
 @use "../assets/styles/app-shell" as app-shell;
+@use "../assets/styles/breakpoints" as bp;
 
 .app-container {
   min-height: 100vh;
@@ -40,6 +41,10 @@
   background-color: colors.$colors-primary !important;
   color: colors.$colors-white !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
 }
 
 .app-bar-spacer {
@@ -48,6 +53,7 @@
 
 .nav-buttons {
   display: flex;
+  flex-shrink: 0;
   gap: spacing.$spacing-small;
 
   a {
@@ -65,6 +71,13 @@
       background-color: colors.$colors-primary-dark;
       font-weight: fonts.$font-weight-medium;
     }
+  }
+}
+
+@media (max-width: bp.$handset-max) {
+  .nav-buttons a {
+    padding: spacing.$spacing-extra-small;
+    font-size: fonts.$font-size-sm;
   }
 }
 
@@ -122,6 +135,15 @@
 
 .app-main {
   padding: spacing.$spacing-medium spacing.$spacing-large spacing.$spacing-large;
+  padding-bottom: max(
+    spacing.$spacing-large,
+    env(safe-area-inset-bottom, 0px)
+  );
+
+  @media (max-width: bp.$handset-max) {
+    padding-left: spacing.$spacing-medium;
+    padding-right: spacing.$spacing-medium;
+  }
 }
 
 .modal {
@@ -130,6 +152,9 @@
   left: 0;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   background-color: rgba(0, 0, 0, 0.7);
   z-index: 1000;
   display: flex;
@@ -163,6 +188,31 @@
     margin: 0;
     @include fonts.fonts-h3;
     color: var(--app-text-primary);
+  }
+}
+
+.modal-body {
+  padding: spacing.$spacing-medium;
+}
+
+.modal-footer {
+  padding: spacing.$spacing-medium;
+  border-top: 1px solid var(--app-divider);
+  display: flex;
+  flex-wrap: wrap;
+  gap: spacing.$spacing-small;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+@media (max-width: bp.$stack-dialog-actions-max) {
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+
+    .mat-mdc-button-base {
+      width: 100%;
+    }
   }
 }
 
@@ -213,6 +263,20 @@
   width: 200px;
   height: 200px;
   color: var(--app-text-secondary);
+}
+
+@media (max-width: bp.$handset-max) {
+  .avatar-icon-large {
+    font-size: 120px;
+    width: 120px;
+    height: 120px;
+  }
+
+  .modal-header .modal-title {
+    font-size: fonts.$font-size-base;
+    line-height: fonts.$line-height-normal;
+    word-break: break-word;
+  }
 }
 
 .file-input-container {

@@ -1,6 +1,7 @@
 @use "../../assets/styles/colors" as colors;
 @use "../../assets/styles/spacing" as spacing;
 @use "../../assets/styles/fonts" as fonts;
+@use "../../assets/styles/breakpoints" as bp;
 
 .memories-container {
   // Horizontal inset comes from .app-main; avoid doubling top padding under the toolbar.
@@ -59,6 +60,22 @@
   justify-content: center;
   align-items: flex-start;
   padding: spacing.$spacing-large spacing.$spacing-medium;
+  padding-top: max(
+    spacing.$spacing-large,
+    env(safe-area-inset-top, 0px)
+  );
+  padding-right: max(
+    spacing.$spacing-medium,
+    env(safe-area-inset-right, 0px)
+  );
+  padding-bottom: max(
+    spacing.$spacing-large,
+    env(safe-area-inset-bottom, 0px)
+  );
+  padding-left: max(
+    spacing.$spacing-medium,
+    env(safe-area-inset-left, 0px)
+  );
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
@@ -286,6 +303,23 @@ mat-card-header {
   min-height: 60px;
 }
 
+@media (max-width: bp.$handset-max) {
+  .memory-card mat-card-header {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: unset;
+  }
+
+  .memory-card .memory-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .memory-card .memory-date {
+    font-size: fonts.$font-size-lg;
+  }
+}
+
 .memory-date {
   flex: 1;
   min-width: 0;
@@ -379,6 +413,10 @@ $photo-lightbox-max-h: 85vh;
   align-items: center;
   justify-content: center;
   padding: spacing.$spacing-medium;
+  padding-top: max(spacing.$spacing-medium, env(safe-area-inset-top, 0px));
+  padding-right: max(spacing.$spacing-medium, env(safe-area-inset-right, 0px));
+  padding-bottom: max(spacing.$spacing-medium, env(safe-area-inset-bottom, 0px));
+  padding-left: max(spacing.$spacing-medium, env(safe-area-inset-left, 0px));
   box-sizing: border-box;
   background-color: rgba(0, 0, 0, 0.85);
   cursor: pointer;
@@ -400,11 +438,15 @@ $photo-lightbox-max-h: 85vh;
   display: block;
   max-width: min(
     #{$photo-lightbox-max-w},
-    calc(100vw - #{$photo-lightbox-pad})
+    calc(
+      100vw - #{$photo-lightbox-pad} - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)
+    )
   );
   max-height: min(
     #{$photo-lightbox-max-h},
-    calc(100vh - #{$photo-lightbox-pad})
+    calc(
+      100vh - #{$photo-lightbox-pad} - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    )
   );
   width: auto;
   height: auto;
@@ -442,5 +484,26 @@ $photo-lightbox-max-h: 85vh;
 
   .mat-mdc-card-title {
     color: var(--app-text-primary) !important;
+  }
+
+  .modal-content .mat-mdc-card-actions {
+    flex-wrap: wrap;
+    gap: spacing.$spacing-small;
+    justify-content: flex-end;
+  }
+
+  .ai-image-actions.mat-mdc-card-actions {
+    gap: spacing.$spacing-small;
+  }
+}
+
+@media (max-width: bp.$stack-dialog-actions-max) {
+  :host ::ng-deep .modal-content .mat-mdc-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .mat-mdc-button-base {
+      width: 100%;
+    }
   }
 }
