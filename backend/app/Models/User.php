@@ -25,7 +25,7 @@ class User extends Authenticatable
                 UserPreference::defaultAttributes()
             );
         });
-    }
+    } 
 
     /**
      * The attributes that are mass assignable.
