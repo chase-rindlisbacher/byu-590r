@@ -78,12 +78,6 @@
               tabindex="0"
               role="button"
               [attr.aria-label]="'View photo larger'"
-              (load)="
-                onMemoryImageReveal($event, 'memory-image--loaded')
-              "
-              (error)="
-                onMemoryImageReveal($event, 'memory-image--loaded')
-              "
               (click)="openExpandedMemoryMedia(m.url, 'Memory photo')"
               (keydown.enter)="
                 openExpandedMemoryMedia(m.url, 'Memory photo'); $event.preventDefault()
@@ -448,8 +442,6 @@
                     decoding="async"
                     loading="lazy"
                     [attr.fetchpriority]="thumbIndex < 4 ? 'high' : undefined"
-                    (load)="onMemoryImageReveal($event, 'media-thumb--loaded')"
-                    (error)="onMemoryImageReveal($event, 'media-thumb--loaded')"
                   />
                   @if (m.is_ai_generated) {
                   <span class="ai-media-badge ai-media-badge--tile" title="AI-generated"

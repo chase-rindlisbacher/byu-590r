@@ -8,10 +8,13 @@ import { Memory } from '../services/memory.service';
 
 export interface MemoryState {
   memoriesList: Memory[];
+  /** True after first successful list fetch this session (even if the list is empty). */
+  listLoadedFromApi: boolean;
 }
 
 const initialState: MemoryState = {
   memoriesList: [],
+  listLoadedFromApi: false,
 };
 
 export const MemoryStore = signalStore(
@@ -21,6 +24,7 @@ export const MemoryStore = signalStore(
     setMemories(memories: Memory[]): void {
       patchState(store, {
         memoriesList: memories,
+        listLoadedFromApi: true,
       });
     },
     addMemory(memory: Memory): void {
@@ -44,6 +48,14 @@ export const MemoryStore = signalStore(
       const currentMemories = store.memoriesList();
       patchState(store, {
         memoriesList: currentMemories.filter((m) => m.id !== memory.id),
+      });
+    },
+
+    /** Call on logout or user switch so the next visit does a full load. */
+    resetSession(): void {
+      patchState(store, {
+        memoriesList: [],
+        listLoadedFromApi: false,
       });
     },
   }))

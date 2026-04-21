@@ -81,7 +81,11 @@ export class MemoriesComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
 
   memories = this.memoryStore.memoriesList;
-  isLoading = signal(true);
+  /**
+   * When the list has already been loaded this session, start false so the first
+   * paint shows cards — not a one-frame loading state that swaps the whole view.
+   */
+  isLoading = signal(!this.memoryStore.listLoadedFromApi());
   locations = signal<Location[]>([]);
 
   createMemoryDialog = signal(false);
@@ -201,19 +205,6 @@ export class MemoriesComponent implements OnInit, OnDestroy {
     document.body.classList.remove(PHOTO_LIGHTBOX_BODY_CLASS);
   }
 
-  /**
-   * Soft fade-in for remote images once loaded (see component SCSS).
-   */
-  onMemoryImageReveal(
-    event: Event,
-    loadedClass: 'memory-image--loaded' | 'media-thumb--loaded',
-  ): void {
-    const t = event.target;
-    if (t instanceof HTMLImageElement) {
-      t.classList.add(loadedClass);
-    }
-  }
-
   ngOnInit(): void {
     this.memoryService.getBackendHealth().subscribe({
       next: (h) => {
@@ -223,11 +214,16 @@ export class MemoriesComponent implements OnInit, OnDestroy {
         this.aiImageGenerationAvailable.set(false);
       },
     });
-    this.getMemories();
+    if (!this.memoryStore.listLoadedFromApi()) {
+      this.loadMemoriesWithSpinner();
+    }
+    // Cached list: do not auto-refetch on every navigation — that replaces store
+    // data and re-renders the grid (visible blink). Data updates on create/edit/delete.
     this.loadLocations();
   }
 
-  getMemories(): void {
+  /** First visit / cold cache: show spinner until API returns. */
+  private loadMemoriesWithSpinner(): void {
     this.isLoading.set(true);
     this.memoryService.getMemories().subscribe({
       next: (response) => {

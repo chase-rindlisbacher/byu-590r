@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import { Location } from './memory.service';
@@ -21,6 +21,9 @@ export class LocationService {
   private authService = inject(AuthService);
   private apiUrl = environment.apiUrl;
 
+  /** In-memory cache for the session (cleared on logout). */
+  private locationsCache: Location[] | null = null;
+
   private getAuthHeaders(): { [key: string]: string } {
     const user = this.authService.getStoredUser();
     if (user && user.token) {
@@ -34,20 +37,54 @@ export class LocationService {
     results: Location[];
     message: string;
   }> {
-    return this.http.get<{
-      success: boolean;
-      results: Location[];
-      message: string;
-    }>(`${this.apiUrl}locations`, { headers: this.getAuthHeaders() });
+    if (this.locationsCache !== null) {
+      return of({
+        success: true,
+        results: this.locationsCache,
+        message: '',
+      });
+    }
+    return this.http
+      .get<{
+        success: boolean;
+        results: Location[];
+        message: string;
+      }>(`${this.apiUrl}locations`, { headers: this.getAuthHeaders() })
+      .pipe(
+        tap((res) => {
+          if (res.success && Array.isArray(res.results)) {
+            this.locationsCache = res.results;
+          }
+        })
+      );
   }
 
   createLocation(
     payload: CreateLocationPayload
   ): Observable<{ success: boolean; results: Location; message: string }> {
-    return this.http.post<{ success: boolean; results: Location; message: string }>(
-      `${this.apiUrl}locations`,
-      payload,
-      { headers: this.getAuthHeaders() }
-    );
+    return this.http
+      .post<{ success: boolean; results: Location; message: string }>(
+        `${this.apiUrl}locations`,
+        payload,
+        { headers: this.getAuthHeaders() }
+      )
+      .pipe(
+        tap((res) => {
+          if (!res.success || !res.results) {
+            return;
+          }
+          if (this.locationsCache === null) {
+            this.locationsCache = [res.results];
+          } else {
+            this.locationsCache = [...this.locationsCache, res.results].sort(
+              (a, b) => a.name.localeCompare(b.name)
+            );
+          }
+        })
+      );
+  }
+
+  clearCache(): void {
+    this.locationsCache = null;
   }
 }

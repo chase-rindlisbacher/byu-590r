@@ -89,6 +89,8 @@ describe('MemoriesComponent', () => {
         MemoryStore,
       ],
     }).compileComponents();
+
+    TestBed.inject(MemoryStore).resetSession();
   });
 
   it('should create', () => {

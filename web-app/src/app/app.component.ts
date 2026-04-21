@@ -28,6 +28,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoginComponent } from './auth/login/login.component';
+import { MemoryStore } from './core/stores/memory.store';
+import { LocationService } from './core/services/location.service';
 
 @Component({
   selector: 'app-root',
@@ -58,6 +60,8 @@ export class AppComponent {
   private userPreferencesStore = inject(UserPreferencesStore);
   private userService = inject(UserService);
   private router = inject(Router);
+  private memoryStore = inject(MemoryStore);
+  private locationService = inject(LocationService);
 
   /** Shell accent: slightly different ruled spacing on Home vs Memories (same palette). */
   shellRoute = signal<'home' | 'memories' | 'default'>('default');
@@ -149,6 +153,8 @@ export class AppComponent {
   logout(): void {
     this.hasLoadedUser.set(false);
     this.userPreferencesStore.clear();
+    this.memoryStore.resetSession();
+    this.locationService.clearCache();
     this.authStore.logout();
     this.router.navigate(['/login']);
   }
