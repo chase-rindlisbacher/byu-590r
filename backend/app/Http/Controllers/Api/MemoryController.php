@@ -70,9 +70,9 @@ class MemoryController extends BaseController
             'journal_entry' => 'required|string',
             'time' => 'required|date',
             'location_id' => 'required|exists:locations,id',
-            'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp',
+            'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
             'files' => 'nullable|array',
-            'files.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp',
+            'files.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
         ]);
 
         if ($validator->fails()) {
@@ -122,7 +122,7 @@ class MemoryController extends BaseController
 
         $validator = Validator::make($request->all(), [
             'files' => 'required|array|min:1',
-            'files.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp',
+            'files.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
         ]);
 
         if ($validator->fails()) {
@@ -231,7 +231,7 @@ class MemoryController extends BaseController
             'journal_entry' => 'required|string',
             'time' => 'required|date',
             'location_id' => 'required|exists:locations,id',
-            'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp',
+            'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
         ]);
 
         if ($validator->fails()) {

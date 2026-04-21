@@ -223,22 +223,47 @@
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Name*</mat-label>
                   <input matInput formControlName="name" />
+                  @if (getFieldError(newLocationForm, 'name')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "name")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>State*</mat-label>
                   <input matInput formControlName="state" />
+                  @if (getFieldError(newLocationForm, 'state')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "state")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Street</mat-label>
                   <input matInput formControlName="street" />
+                  @if (getFieldError(newLocationForm, 'street')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "street")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>City</mat-label>
                   <input matInput formControlName="city" />
+                  @if (getFieldError(newLocationForm, 'city')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "city")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Zip</mat-label>
                   <input matInput formControlName="zipcode" />
+                  @if (getFieldError(newLocationForm, 'zipcode')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "zipcode")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <div class="new-location-actions">
                   <button
@@ -266,8 +291,9 @@
             <div class="form-group">
               <label class="file-input-label">Photos (optional)</label>
               <p class="field-hint">
-                Image files only. Select one or more; the first becomes the cover,
-                and any additional selections are stored with the memory.
+                Image files only (10MB max each). Select one or more; the first
+                becomes the cover, and any additional selections are stored with
+                the memory.
               </p>
               <input
                 type="file"
@@ -380,22 +406,47 @@
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Name*</mat-label>
                   <input matInput formControlName="name" />
+                  @if (getFieldError(newLocationForm, 'name')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "name")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>State*</mat-label>
                   <input matInput formControlName="state" />
+                  @if (getFieldError(newLocationForm, 'state')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "state")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Street</mat-label>
                   <input matInput formControlName="street" />
+                  @if (getFieldError(newLocationForm, 'street')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "street")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>City</mat-label>
                   <input matInput formControlName="city" />
+                  @if (getFieldError(newLocationForm, 'city')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "city")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Zip</mat-label>
                   <input matInput formControlName="zipcode" />
+                  @if (getFieldError(newLocationForm, 'zipcode')) {
+                  <mat-error>{{
+                    getFieldError(newLocationForm, "zipcode")
+                  }}</mat-error>
+                  }
                 </mat-form-field>
                 <div class="new-location-actions">
                   <button
@@ -586,6 +637,7 @@
             mat-button
             type="button"
             color="primary"
+            [disabled]="memoryIsGeneratingAiImage()"
             (click)="dontAskAgainAiImagePrompt()"
           >
             Don&rsquo;t ask again

@@ -9,16 +9,16 @@
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Email</mat-label>
             <input matInput type="email" formControlName="email" />
-            @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
-              <mat-error>Email is required and must be valid</mat-error>
+            @if (getFieldError(loginForm, 'email')) {
+              <mat-error>{{ getFieldError(loginForm, "email") }}</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Password</mat-label>
             <input matInput type="password" formControlName="password" />
-            @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
-              <mat-error>Password is required and must be at least 8 characters</mat-error>
+            @if (getFieldError(loginForm, 'password')) {
+              <mat-error>{{ getFieldError(loginForm, "password") }}</mat-error>
             }
           </mat-form-field>
         </div>
@@ -81,6 +81,11 @@
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Password Reset Email</mat-label>
                 <input matInput type="email" formControlName="email" />
+                @if (getFieldError(forgotPasswordForm, 'email')) {
+                  <mat-error>{{
+                    getFieldError(forgotPasswordForm, "email")
+                  }}</mat-error>
+                }
               </mat-form-field>
             </form>
           </mat-card-content>
@@ -119,20 +124,33 @@
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Full name*</mat-label>
                 <input matInput type="text" formControlName="name" />
+                @if (getFieldError(registerForm, 'name')) {
+                  <mat-error>{{ getFieldError(registerForm, "name") }}</mat-error>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Email*</mat-label>
                 <input matInput type="email" formControlName="email" />
+                @if (getFieldError(registerForm, 'email')) {
+                  <mat-error>{{ getFieldError(registerForm, "email") }}</mat-error>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Password*</mat-label>
                 <input matInput type="password" formControlName="password" />
+                @if (getFieldError(registerForm, 'password')) {
+                  <mat-error>{{
+                    getFieldError(registerForm, "password")
+                  }}</mat-error>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Password Confirmation*</mat-label>
                 <input matInput type="password" formControlName="c_password" />
-                @if (registerForm.get('c_password')?.hasError('passwordMismatch')) {
-                  <mat-error>The password confirmation does not match.</mat-error>
+                @if (getFieldError(registerForm, 'c_password')) {
+                  <mat-error>{{
+                    getFieldError(registerForm, "c_password")
+                  }}</mat-error>
                 }
               </mat-form-field>
               <small>*indicates required field</small>

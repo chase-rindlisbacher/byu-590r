@@ -29,24 +29,64 @@ export function clearFormErrors(form: FormGroup): void {
   });
 }
 
+function humanizeFieldName(fieldName: string): string {
+  return fieldName.replace(/_/g, ' ');
+}
+
+const FIELD_LABEL_OVERRIDES: Record<string, string> = {
+  journal_entry: 'Journal entry',
+  location_id: 'Location',
+  c_password: 'Password confirmation',
+};
+
+function fieldLabel(fieldName: string): string {
+  return FIELD_LABEL_OVERRIDES[fieldName] ?? humanizeFieldName(fieldName);
+}
+
 export function getFieldError(
   form: FormGroup,
   fieldName: string
 ): string | null {
   const control = form.get(fieldName);
-  if (control && control.errors) {
-    if (control.errors['serverError']) {
-      return control.errors['serverError'];
-    }
-    if (control.touched) {
-      if (control.errors['required']) {
-        return `${fieldName} is required`;
-      }
-      if (control.errors['min']) {
-        return `${fieldName} must be at least ${control.errors['min'].min}`;
-      }
-    }
+  if (!control?.errors) {
+    return null;
   }
+  const label = fieldLabel(fieldName);
+
+  if (control.errors['serverError']) {
+    return control.errors['serverError'];
+  }
+
+  if (!control.touched) {
+    return null;
+  }
+
+  if (control.errors['required']) {
+    return `${label} is required`;
+  }
+  if (control.errors['email']) {
+    return `Enter a valid email address`;
+  }
+  if (control.errors['minlength']) {
+    const req = control.errors['minlength'].requiredLength;
+    return `${label} must be at least ${req} characters`;
+  }
+  if (control.errors['maxlength']) {
+    const req = control.errors['maxlength'].requiredLength;
+    return `${label} must be at most ${req} characters`;
+  }
+  if (control.errors['min']) {
+    return `${label} must be at least ${control.errors['min'].min}`;
+  }
+  if (control.errors['max']) {
+    return `${label} must be at most ${control.errors['max'].max}`;
+  }
+  if (control.errors['pattern']) {
+    return `${label} has an invalid format`;
+  }
+  if (control.errors['passwordMismatch']) {
+    return `Password confirmation does not match`;
+  }
+
   return null;
 }
-

@@ -18,8 +18,8 @@ class RegisterController extends BaseController
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|min:1',
-            'email' => 'required|email|unique:users,email|min:3',
+            'name' => 'required|string|min:1|max:255',
+            'email' => 'required|email|unique:users,email|min:3|max:255',
             'password' => 'required|min:8',
             'c_password' => 'required|same:password|min:8',
         ]);
@@ -40,6 +40,15 @@ class RegisterController extends BaseController
 
     public function login(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|min:3|max:255',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors(), 422);
+        }
+
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             /** @var \App\Models\User $user **/
             $user = Auth::user();

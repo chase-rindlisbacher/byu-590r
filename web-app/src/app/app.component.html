@@ -132,6 +132,11 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Email</mat-label>
               <input matInput type="email" formControlName="email" />
+              @if (getFieldError(changeEmailForm, 'email')) {
+              <mat-error>{{
+                getFieldError(changeEmailForm, "email")
+              }}</mat-error>
+              }
             </mat-form-field>
           </form>
           }
@@ -160,7 +165,8 @@
             (click)="changeProfileEmail()"
             [disabled]="
               !changeEmailForm.valid ||
-              changeEmailForm.value.email === userStore.user()?.email
+              changeEmailForm.value.email === userStore.user()?.email ||
+              verificationEmailLoading()
             "
           >
             Submit email change

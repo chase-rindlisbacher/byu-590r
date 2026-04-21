@@ -17,6 +17,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import {
+  clearFormErrors,
+  getFieldError,
+  setFormErrors,
+} from '../../core/utils/form.utils';
 
 @Component({
   selector: 'app-login',
@@ -55,6 +60,8 @@ export class LoginComponent {
   submitForgotPasswordLoading = signal(false);
   registerFormIsLoading = signal(false);
 
+  readonly getFieldError = getFieldError;
+
   /** Optimized WebP (~max 1920px wide); fades in when decoded (see login SCSS). */
   private static readonly LOGIN_BG_URL = '/Peaceful_Background_Journaling.webp';
 
@@ -69,17 +76,30 @@ export class LoginComponent {
     this.loginForm = this.fb.group({
       email: [
         '',
-        [Validators.required, Validators.minLength(3), Validators.email],
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(255),
+          Validators.email,
+        ],
       ],
       password: ['', [Validators.required, Validators.minLength(8)]],
     });
 
     this.registerForm = this.fb.group(
       {
-        name: ['', [Validators.required, Validators.minLength(3)]],
+        name: [
+          '',
+          [Validators.required, Validators.minLength(3), Validators.maxLength(255)],
+        ],
         email: [
           '',
-          [Validators.required, Validators.minLength(3), Validators.email],
+          [
+            Validators.required,
+            Validators.minLength(3),
+            Validators.maxLength(255),
+            Validators.email,
+          ],
         ],
         password: ['', [Validators.required, Validators.minLength(8)]],
         c_password: ['', [Validators.required]],
@@ -90,7 +110,12 @@ export class LoginComponent {
     this.forgotPasswordForm = this.fb.group({
       email: [
         '',
-        [Validators.required, Validators.minLength(3), Validators.email],
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(255),
+          Validators.email,
+        ],
       ],
     });
 
@@ -115,11 +140,16 @@ export class LoginComponent {
   }
 
   submitLogin(): void {
+    if (this.isLoading()) {
+      return;
+    }
     if (!this.loginForm.valid) {
+      this.loginForm.markAllAsTouched();
       return;
     }
 
     this.errorMsg.set('');
+    clearFormErrors(this.loginForm);
     this.isLoading.set(true);
 
     this.authService.login(this.loginForm.value).subscribe({
@@ -131,6 +161,10 @@ export class LoginComponent {
         this.isLoading.set(false);
       },
       error: (error) => {
+        const data = error?.error?.data;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          setFormErrors(this.loginForm, data);
+        }
         this.errorMsg.set(
           error?.error?.message || error?.message || 'Login failed'
         );
@@ -140,7 +174,11 @@ export class LoginComponent {
   }
 
   submitForgotPassword(): void {
+    if (this.submitForgotPasswordLoading()) {
+      return;
+    }
     if (!this.forgotPasswordForm.valid) {
+      this.forgotPasswordForm.markAllAsTouched();
       return;
     }
 
@@ -168,10 +206,15 @@ export class LoginComponent {
   }
 
   submitRegister(): void {
+    if (this.registerFormIsLoading()) {
+      return;
+    }
     if (!this.registerForm.valid) {
+      this.registerForm.markAllAsTouched();
       return;
     }
 
+    clearFormErrors(this.registerForm);
     this.registerFormIsLoading.set(true);
     this.authService.register(this.registerForm.value).subscribe({
       next: () => {
@@ -183,7 +226,11 @@ export class LoginComponent {
         this.registerFormIsLoading.set(false);
         this.registerDialog.set(false);
       },
-      error: () => {
+      error: (error) => {
+        const data = error?.error?.data;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          setFormErrors(this.registerForm, data);
+        }
         this.snackBar.open('Error! Registration failed.', 'Close', {
           duration: 5000,
           horizontalPosition: 'center',

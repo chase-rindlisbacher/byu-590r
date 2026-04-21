@@ -66,7 +66,7 @@ class UserController extends BaseController
     public function uploadAvatar(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
         ]);
         if ($request->hasFile('image')) {
             $authUser = Auth::user();
@@ -115,7 +115,7 @@ class UserController extends BaseController
     public function changeEmail(Request $request)
     {
         $request->validate([
-            'change_email' => 'required|email|unique:users,email|min:3',
+            'change_email' => 'required|email|unique:users,email|min:3|max:255',
         ]);
         $authUser = Auth::user();
         $user = User::findOrFail($authUser->id);

@@ -30,6 +30,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoginComponent } from './auth/login/login.component';
 import { MemoryStore } from './core/stores/memory.store';
 import { LocationService } from './core/services/location.service';
+import { getFieldError } from './core/utils/form.utils';
+import { validateImageFile } from './core/utils/file-validation.utils';
 
 @Component({
   selector: 'app-root',
@@ -55,6 +57,8 @@ import { LocationService } from './core/services/location.service';
   styleUrl: './app.component.scss',
 })
 export class AppComponent {
+  readonly getFieldError = getFieldError;
+
   private authStore = inject(AuthStore);
   protected userStore = inject(UserStore);
   private userPreferencesStore = inject(UserPreferencesStore);
@@ -92,7 +96,12 @@ export class AppComponent {
     this.changeEmailForm = this.fb.group({
       email: [
         '',
-        [Validators.required, Validators.minLength(3), Validators.email],
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(255),
+          Validators.email,
+        ],
       ],
     });
 
@@ -187,9 +196,25 @@ export class AppComponent {
   onAvatarChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
+    if (this.profileIsUploading()) {
+      return;
+    }
+
+    const file = input.files[0];
+    const fileErr = validateImageFile(file);
+    if (fileErr) {
+      this.snackBar.open(fileErr, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar'],
+      });
+      input.value = '';
+      return;
+    }
 
     this.profileIsUploading.set(true);
-    this.userService.uploadAvatar(input.files[0]).subscribe({
+    this.userService.uploadAvatar(file).subscribe({
       next: (response) => {
         this.authStore.updateAvatar(response.results.avatar);
         this.profileIsUploading.set(false);
@@ -207,6 +232,9 @@ export class AppComponent {
   }
 
   removeAvatar(): void {
+    if (this.profileIsUploading()) {
+      return;
+    }
     this.profileIsUploading.set(true);
     this.userService.removeAvatar().subscribe({
       next: (response) => {
@@ -228,6 +256,9 @@ export class AppComponent {
   sendVerificationEmail(): void {
     const user = this.userStore.user();
     if (!user) return;
+    if (this.verificationEmailLoading()) {
+      return;
+    }
 
     this.verificationEmailLoading.set(true);
     this.successVerificationMessage.set('');
@@ -252,7 +283,13 @@ export class AppComponent {
   }
 
   changeProfileEmail(): void {
-    if (!this.changeEmailForm.valid) return;
+    if (this.verificationEmailLoading()) {
+      return;
+    }
+    if (!this.changeEmailForm.valid) {
+      this.changeEmailForm.markAllAsTouched();
+      return;
+    }
 
     this.verificationEmailLoading.set(true);
     const changeEmailData = {

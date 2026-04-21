@@ -45,14 +45,23 @@ export class SettingsComponent implements OnInit {
   }
 
   onGenerateImages(ev: MatSlideToggleChange): void {
+    if (this.saving) {
+      return;
+    }
     this.patch({ generate_images: ev.checked });
   }
 
   onExtraContext(ev: MatSlideToggleChange): void {
+    if (this.saving) {
+      return;
+    }
     this.patch({ use_extra_memory_context: ev.checked });
   }
 
   onDismissPrompt(ev: MatSlideToggleChange): void {
+    if (this.saving) {
+      return;
+    }
     this.patch({ dismiss_memory_image_prompt: ev.checked });
   }
 

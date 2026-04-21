@@ -50,6 +50,7 @@ import {
   nowUtcAsDatetimeLocal,
 } from '../core/utils/memory-datetime.utils';
 import { isMobile } from '../core/utils/mobile.utils';
+import { validateImageFiles } from '../core/utils/file-validation.utils';
 
 const PHOTO_LIGHTBOX_BODY_CLASS = 'memories-photo-lightbox-open';
 
@@ -173,11 +174,11 @@ export class MemoriesComponent implements OnInit, OnDestroy {
     });
 
     this.newLocationForm = this.fb.group({
-      name: ['', [Validators.required]],
-      state: ['', [Validators.required]],
-      street: [''],
-      city: [''],
-      zipcode: [''],
+      name: ['', [Validators.required, Validators.maxLength(255)]],
+      state: ['', [Validators.required, Validators.maxLength(255)]],
+      street: ['', [Validators.maxLength(255)]],
+      city: ['', [Validators.maxLength(255)]],
+      zipcode: ['', [Validators.maxLength(255)]],
     });
   }
 
@@ -337,6 +338,14 @@ export class MemoriesComponent implements OnInit, OnDestroy {
       return;
     }
     const files = Array.from(input.files);
+    const photoErr = validateImageFiles(files);
+    if (photoErr) {
+      this.createErrorMessage.set(photoErr);
+      this.selectedCoverFile.set(null);
+      this.selectedAdditionalFiles.set([]);
+      input.value = '';
+      return;
+    }
     this.selectedCoverFile.set(files[0]);
     this.selectedAdditionalFiles.set(files.slice(1));
     this.createErrorMessage.set(null);
@@ -354,6 +363,15 @@ export class MemoriesComponent implements OnInit, OnDestroy {
       return;
     }
     const files = Array.from(input.files);
+    const photoErr = validateImageFiles(files);
+    if (photoErr) {
+      this.editErrorMessage.set(photoErr);
+      this.selectedEditCoverFile.set(null);
+      this.selectedEditAdditionalFiles.set([]);
+      input.value = '';
+      return;
+    }
+    this.editErrorMessage.set(null);
     if (files.length === 1) {
       this.selectedEditCoverFile.set(null);
       this.selectedEditAdditionalFiles.set(files);
@@ -378,6 +396,9 @@ export class MemoriesComponent implements OnInit, OnDestroy {
   }
 
   saveNewLocation(context: 'create' | 'edit'): void {
+    if (this.locationIsSaving()) {
+      return;
+    }
     if (!this.newLocationForm.valid) {
       this.newLocationForm.markAllAsTouched();
       return;
@@ -419,6 +440,9 @@ export class MemoriesComponent implements OnInit, OnDestroy {
   }
 
   createMemory(): void {
+    if (this.memoryIsCreating()) {
+      return;
+    }
     if (!this.newMemoryForm.valid) {
       this.newMemoryForm.markAllAsTouched();
       return;
@@ -555,6 +579,9 @@ export class MemoriesComponent implements OnInit, OnDestroy {
     if (!mem) {
       return;
     }
+    if (this.memoryIsGeneratingAiImage()) {
+      return;
+    }
     this.memoryIsGeneratingAiImage.set(true);
     this.memoryService
       .generateMemoryImage(mem.id, {
@@ -583,6 +610,9 @@ export class MemoriesComponent implements OnInit, OnDestroy {
 
   updateMemory(): void {
     const mem = this.selectedEditMemory();
+    if (this.memoryIsUpdating()) {
+      return;
+    }
     if (!mem || !this.editMemoryForm.valid) {
       this.editMemoryForm.markAllAsTouched();
       return;
@@ -700,6 +730,9 @@ export class MemoriesComponent implements OnInit, OnDestroy {
   deleteMemory(): void {
     const mem = this.selectedDeleteMemory();
     if (!mem) {
+      return;
+    }
+    if (this.memoryIsDeleting()) {
       return;
     }
 
