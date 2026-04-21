@@ -49,6 +49,9 @@ body.memories-photo-lightbox-open {
 
 // Material + list: align with semantic tokens in both modes (cards are often white from Material defaults).
 html[data-theme='dark'] {
+  // Native date/time and other UA widgets follow dark chrome (pairs with --app-* surfaces).
+  color-scheme: dark;
+
   .mat-mdc-card {
     --mdc-elevated-card-container-color: var(--app-surface);
     --mat-card-elevated-container-color: var(--app-surface);
@@ -81,6 +84,49 @@ html[data-theme='dark'] {
   .mat-mdc-form-field {
     --mat-form-field-label-text-color: var(--app-text-secondary);
     --mat-form-field-outlined-input-text-color: var(--app-text-primary);
+    --mat-form-field-filled-input-text-color: var(--app-text-primary);
+
+    .mat-mdc-text-field-wrapper {
+      background-color: var(--app-input-bg);
+    }
+
+    .mat-mdc-form-field-label,
+    .mdc-floating-label {
+      color: var(--app-text-secondary) !important;
+    }
+
+    .mat-mdc-input-element {
+      color: var(--app-text-primary) !important;
+    }
+
+    .mat-mdc-input-element::placeholder {
+      color: var(--app-text-secondary) !important;
+      opacity: 1;
+    }
+
+    textarea.mat-mdc-input-element {
+      color: var(--app-text-primary) !important;
+    }
+  }
+
+  // mat-select uses its own trigger/value nodes (not .mat-mdc-input-element).
+  .mat-mdc-select,
+  .mat-mdc-select-value,
+  .mat-mdc-select-value-text,
+  .mat-mdc-select-min-line {
+    color: var(--app-text-primary) !important;
+  }
+
+  .mat-mdc-select-arrow {
+    color: var(--app-text-secondary) !important;
+  }
+
+  .mat-mdc-select-panel {
+    background-color: var(--app-surface-elevated) !important;
+  }
+
+  .mat-mdc-option .mdc-list-item__primary-text {
+    color: var(--app-text-primary) !important;
   }
 
   .mat-mdc-snack-bar-container.mat-mdc-snack-bar-container {
@@ -90,6 +136,8 @@ html[data-theme='dark'] {
 }
 
 html[data-theme='light'] {
+  color-scheme: light;
+
   .mat-mdc-card {
     --mdc-elevated-card-container-color: var(--app-surface);
     background-color: var(--app-surface) !important;

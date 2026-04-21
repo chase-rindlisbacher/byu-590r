@@ -51,6 +51,8 @@ import {
 } from '../core/utils/memory-datetime.utils';
 import { isMobile } from '../core/utils/mobile.utils';
 import { validateImageFiles } from '../core/utils/file-validation.utils';
+import { getHttpErrorMessage } from '../core/utils/api-error.utils';
+import { showStyledErrorSnackbar } from '../core/ui/error-snackbar';
 
 const PHOTO_LIGHTBOX_BODY_CLASS = 'memories-photo-lightbox-open';
 
@@ -126,6 +128,10 @@ export class MemoriesComponent implements OnInit, OnDestroy {
 
   createErrorMessage = signal<string | null>(null);
   editErrorMessage = signal<string | null>(null);
+  /** List GET failed — show banner instead of empty grid. */
+  memoriesListError = signal<string | null>(null);
+  /** New location form: server error summary (field errors use mat-error). */
+  newLocationApiError = signal<string | null>(null);
 
   /** After save with no photos: offer optional Gemini-generated image. */
   aiImageOfferMemory = signal<Memory | null>(null);
@@ -225,6 +231,7 @@ export class MemoriesComponent implements OnInit, OnDestroy {
 
   /** First visit / cold cache: show spinner until API returns. */
   private loadMemoriesWithSpinner(): void {
+    this.memoriesListError.set(null);
     this.isLoading.set(true);
     this.memoryService.getMemories().subscribe({
       next: (response) => {
@@ -232,10 +239,16 @@ export class MemoriesComponent implements OnInit, OnDestroy {
         this.isLoading.set(false);
       },
       error: (error) => {
-        console.error('Error fetching memories:', error);
         this.isLoading.set(false);
+        this.memoriesListError.set(
+          getHttpErrorMessage(error, 'Could not load memories.')
+        );
       },
     });
+  }
+
+  retryMemoriesLoad(): void {
+    this.loadMemoriesWithSpinner();
   }
 
   loadLocations(): void {
@@ -243,8 +256,33 @@ export class MemoriesComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.locations.set(res.results);
       },
-      error: (err) => console.error('Error loading locations', err),
+      error: (err) => {
+        showStyledErrorSnackbar(
+          this.snackBar,
+          getHttpErrorMessage(err, 'Could not load locations.')
+        );
+      },
     });
+  }
+
+  startInlineNewLocation(context: 'create' | 'edit'): void {
+    this.newLocationApiError.set(null);
+    clearFormErrors(this.newLocationForm);
+    if (context === 'create') {
+      this.showNewLocationInCreate.set(true);
+    } else {
+      this.showNewLocationInEdit.set(true);
+    }
+  }
+
+  cancelInlineNewLocation(context: 'create' | 'edit'): void {
+    this.newLocationApiError.set(null);
+    clearFormErrors(this.newLocationForm);
+    if (context === 'create') {
+      this.showNewLocationInCreate.set(false);
+    } else {
+      this.showNewLocationInEdit.set(false);
+    }
   }
 
   formatDate(memory: Memory): string {
@@ -277,6 +315,7 @@ export class MemoriesComponent implements OnInit, OnDestroy {
       zipcode: '',
     });
     this.createErrorMessage.set(null);
+    this.newLocationApiError.set(null);
     clearFormErrors(this.newMemoryForm);
     this.createMemoryDialog.set(true);
   }
@@ -306,6 +345,7 @@ export class MemoriesComponent implements OnInit, OnDestroy {
       zipcode: '',
     });
     this.editErrorMessage.set(null);
+    this.newLocationApiError.set(null);
     clearFormErrors(this.editMemoryForm);
     this.editMemoryDialog.set(true);
   }
@@ -405,9 +445,12 @@ export class MemoriesComponent implements OnInit, OnDestroy {
     }
     const v = this.newLocationForm.value as CreateLocationPayload;
     this.locationIsSaving.set(true);
+    this.newLocationApiError.set(null);
+    clearFormErrors(this.newLocationForm);
     this.locationService.createLocation(v).subscribe({
       next: (res) => {
         const loc = res.results;
+        this.newLocationApiError.set(null);
         this.locations.update((list) =>
           [...list, loc].sort((a, b) => a.name.localeCompare(b.name))
         );
@@ -428,13 +471,17 @@ export class MemoriesComponent implements OnInit, OnDestroy {
         this.locationIsSaving.set(false);
         this.snackBar.open('Location created', 'Dismiss', { duration: 3000 });
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.locationIsSaving.set(false);
-        this.snackBar.open(
-          err?.error?.message ?? 'Could not create location',
-          'Dismiss',
-          { duration: 5000 }
-        );
+        const data = err.error?.data;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          setFormErrors(this.newLocationForm, data);
+          this.newLocationApiError.set('Please fix the errors below.');
+        } else {
+          this.newLocationApiError.set(
+            getHttpErrorMessage(err, 'Could not create location.')
+          );
+        }
       },
     });
   }
@@ -473,7 +520,7 @@ export class MemoriesComponent implements OnInit, OnDestroy {
           this.createErrorMessage.set('Please fix the validation errors below.');
         } else {
           this.createErrorMessage.set(
-            error?.error?.message ?? 'Error creating memory'
+            getHttpErrorMessage(error, 'Error creating memory')
           );
         }
         this.memoryIsCreating.set(false);
@@ -558,10 +605,7 @@ export class MemoriesComponent implements OnInit, OnDestroy {
         );
       },
       () => {
-        this.snackBar.open('Could not save preference', 'Dismiss', {
-          duration: 5000,
-          panelClass: ['error-snackbar'],
-        });
+        showStyledErrorSnackbar(this.snackBar, 'Could not save preference.');
       }
     );
   }
@@ -599,11 +643,14 @@ export class MemoriesComponent implements OnInit, OnDestroy {
         },
         error: (err: HttpErrorResponse) => {
           this.memoryIsGeneratingAiImage.set(false);
-          const body = err.error as { message?: string } | undefined;
-          const msg =
-            body?.message ??
-            'Could not generate an image. You can try again from edit later.';
-          this.snackBar.open(msg, 'Dismiss', { duration: 8000 });
+          showStyledErrorSnackbar(
+            this.snackBar,
+            getHttpErrorMessage(
+              err,
+              'Could not generate an image. You can try again from edit later.'
+            ),
+            8000
+          );
         },
       });
   }
@@ -643,17 +690,14 @@ export class MemoriesComponent implements OnInit, OnDestroy {
               this.selectedEditMemory.set(r.results);
               this.runPendingMediaDeletes();
             },
-            error: (error) => {
-              this.editErrorMessage.set(
-                error?.error?.message ??
-                  'Details saved but new photos failed to upload.'
+            error: (error: HttpErrorResponse) => {
+              const msg = getHttpErrorMessage(
+                error,
+                'Details saved but new photos failed to upload.'
               );
+              this.editErrorMessage.set(msg);
               this.memoryIsUpdating.set(false);
-              this.snackBar.open(
-                this.editErrorMessage() ?? 'Upload failed',
-                'Dismiss',
-                { duration: 6000 }
-              );
+              showStyledErrorSnackbar(this.snackBar, msg);
             },
           });
         } else {
@@ -666,7 +710,7 @@ export class MemoriesComponent implements OnInit, OnDestroy {
           this.editErrorMessage.set('Please fix the validation errors below.');
         } else {
           this.editErrorMessage.set(
-            error?.error?.message ?? 'Error updating memory'
+            getHttpErrorMessage(error, 'Error updating memory')
           );
         }
         this.memoryIsUpdating.set(false);
@@ -699,16 +743,14 @@ export class MemoriesComponent implements OnInit, OnDestroy {
           }
           runAt(index + 1);
         },
-        error: (err) => {
-          this.editErrorMessage.set(
-            err?.error?.message ?? 'Could not remove one or more photos.'
+        error: (err: HttpErrorResponse) => {
+          const msg = getHttpErrorMessage(
+            err,
+            'Could not remove one or more photos.'
           );
+          this.editErrorMessage.set(msg);
           this.memoryIsUpdating.set(false);
-          this.snackBar.open(
-            this.editErrorMessage() ?? 'Remove failed',
-            'Dismiss',
-            { duration: 6000 }
-          );
+          showStyledErrorSnackbar(this.snackBar, msg);
         },
       });
     };
@@ -744,12 +786,12 @@ export class MemoriesComponent implements OnInit, OnDestroy {
         this.memoryIsDeleting.set(false);
         this.snackBar.open('Memory deleted', 'Dismiss', { duration: 3000 });
       },
-      error: (error) => {
-        console.error('Error deleting memory:', error);
+      error: (error: HttpErrorResponse) => {
         this.memoryIsDeleting.set(false);
-        this.snackBar.open('Could not delete memory', 'Dismiss', {
-          duration: 5000,
-        });
+        showStyledErrorSnackbar(
+          this.snackBar,
+          getHttpErrorMessage(error, 'Could not delete memory.')
+        );
       },
     });
   }

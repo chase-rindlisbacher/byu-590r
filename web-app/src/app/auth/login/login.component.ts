@@ -7,6 +7,7 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 import { AuthStore } from '../../core/stores/auth.store';
 import { MatCardModule } from '@angular/material/card';
@@ -22,6 +23,8 @@ import {
   getFieldError,
   setFormErrors,
 } from '../../core/utils/form.utils';
+import { getHttpErrorMessage } from '../../core/utils/api-error.utils';
+import { showStyledErrorSnackbar } from '../../core/ui/error-snackbar';
 
 @Component({
   selector: 'app-login',
@@ -59,6 +62,7 @@ export class LoginComponent {
   registerDialog = signal(false);
   submitForgotPasswordLoading = signal(false);
   registerFormIsLoading = signal(false);
+  forgotPasswordAlert = signal<string | null>(null);
 
   readonly getFieldError = getFieldError;
 
@@ -166,11 +170,22 @@ export class LoginComponent {
           setFormErrors(this.loginForm, data);
         }
         this.errorMsg.set(
-          error?.error?.message || error?.message || 'Login failed'
+          getHttpErrorMessage(error, 'Login failed')
         );
         this.isLoading.set(false);
       },
     });
+  }
+
+  openForgotPasswordDialog(): void {
+    this.forgotPasswordAlert.set(null);
+    clearFormErrors(this.forgotPasswordForm);
+    this.passwordResetDialog.set(true);
+  }
+
+  openRegisterDialog(): void {
+    clearFormErrors(this.registerForm);
+    this.registerDialog.set(true);
   }
 
   submitForgotPassword(): void {
@@ -183,6 +198,8 @@ export class LoginComponent {
     }
 
     this.submitForgotPasswordLoading.set(true);
+    this.forgotPasswordAlert.set(null);
+    clearFormErrors(this.forgotPasswordForm);
     this.authService
       .forgotPassword(this.forgotPasswordForm.value.email)
       .subscribe({
@@ -199,10 +216,28 @@ export class LoginComponent {
           this.submitForgotPasswordLoading.set(false);
           this.passwordResetDialog.set(false);
         },
-        error: () => {
+        error: (error: HttpErrorResponse) => {
           this.submitForgotPasswordLoading.set(false);
+          const data = error?.error?.data as
+            | Record<string, string[]>
+            | undefined;
+          if (data && typeof data === 'object' && !Array.isArray(data)) {
+            setFormErrors(this.forgotPasswordForm, data);
+          }
+          this.forgotPasswordAlert.set(
+            getHttpErrorMessage(error, 'Could not process password reset.')
+          );
         },
       });
+  }
+
+  closeForgotPasswordDialog(): void {
+    this.forgotPasswordAlert.set(null);
+    this.passwordResetDialog.set(false);
+  }
+
+  closeRegisterDialog(): void {
+    this.registerDialog.set(false);
   }
 
   submitRegister(): void {
@@ -226,17 +261,15 @@ export class LoginComponent {
         this.registerFormIsLoading.set(false);
         this.registerDialog.set(false);
       },
-      error: (error) => {
+      error: (error: HttpErrorResponse) => {
         const data = error?.error?.data;
         if (data && typeof data === 'object' && !Array.isArray(data)) {
           setFormErrors(this.registerForm, data);
         }
-        this.snackBar.open('Error! Registration failed.', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar'],
-        });
+        showStyledErrorSnackbar(
+          this.snackBar,
+          getHttpErrorMessage(error, 'Registration failed.')
+        );
         this.registerFormIsLoading.set(false);
       },
     });

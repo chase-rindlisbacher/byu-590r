@@ -30,8 +30,15 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoginComponent } from './auth/login/login.component';
 import { MemoryStore } from './core/stores/memory.store';
 import { LocationService } from './core/services/location.service';
-import { getFieldError } from './core/utils/form.utils';
+import {
+  clearFormErrors,
+  getFieldError,
+  setFormErrors,
+} from './core/utils/form.utils';
 import { validateImageFile } from './core/utils/file-validation.utils';
+import { HttpErrorResponse } from '@angular/common/http';
+import { getHttpErrorMessage } from './core/utils/api-error.utils';
+import { showStyledErrorSnackbar } from './core/ui/error-snackbar';
 
 @Component({
   selector: 'app-root',
@@ -256,13 +263,11 @@ export class AppComponent {
         this.authStore.updateAvatar(null);
         this.profileIsUploading.set(false);
       },
-      error: () => {
-        this.snackBar.open('Error. Try again', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar'],
-        });
+      error: (err: HttpErrorResponse) => {
+        showStyledErrorSnackbar(
+          this.snackBar,
+          getHttpErrorMessage(err, 'Could not remove avatar. Try again.')
+        );
         this.profileIsUploading.set(false);
       },
     });
@@ -285,13 +290,11 @@ export class AppComponent {
         );
         this.verificationEmailLoading.set(false);
       },
-      error: () => {
-        this.snackBar.open('Error. Try again', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar'],
-        });
+      error: (err: HttpErrorResponse) => {
+        showStyledErrorSnackbar(
+          this.snackBar,
+          getHttpErrorMessage(err, 'Could not send verification email.')
+        );
         this.verificationEmailLoading.set(false);
       },
     });
@@ -307,6 +310,7 @@ export class AppComponent {
     }
 
     this.verificationEmailLoading.set(true);
+    clearFormErrors(this.changeEmailForm);
     const changeEmailData = {
       change_email: this.changeEmailForm.value.email,
     };
@@ -321,13 +325,19 @@ export class AppComponent {
         this.verificationEmailLoading.set(false);
         this.showChangeEmailTextField.set(false);
       },
-      error: () => {
-        this.snackBar.open('Error. Try again', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar'],
-        });
+      error: (err: HttpErrorResponse) => {
+        const raw = err.error?.data as Record<string, string[]> | undefined;
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          const mapped: Record<string, string[]> = { ...raw };
+          if (raw['change_email'] && !raw['email']) {
+            mapped['email'] = raw['change_email'];
+          }
+          setFormErrors(this.changeEmailForm, mapped);
+        }
+        showStyledErrorSnackbar(
+          this.snackBar,
+          getHttpErrorMessage(err, 'Could not update email.')
+        );
         this.verificationEmailLoading.set(false);
       },
     });

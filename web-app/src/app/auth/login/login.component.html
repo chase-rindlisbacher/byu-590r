@@ -49,7 +49,7 @@
           class="action-button"
           style="color: black"
           type="button"
-          (click)="passwordResetDialog.set(true)"
+          (click)="openForgotPasswordDialog()"
         >
           Forgot Password
         </button>
@@ -58,7 +58,7 @@
           class="action-button"
           style="color: black"
           type="button"
-          (click)="registerDialog.set(true)"
+          (click)="openRegisterDialog()"
         >
           Register
         </button>
@@ -67,16 +67,24 @@
   </mat-card>
 
   @if (passwordResetDialog()) {
-    <div class="modal" (click)="passwordResetDialog.set(false)">
+    <div class="modal" (click)="closeForgotPasswordDialog()">
       <div class="modal-dialog" (click)="$event.stopPropagation()">
         <mat-card class="modal-content">
           <mat-card-header>
             <mat-card-title>Password Reset</mat-card-title>
-            <button mat-icon-button (click)="passwordResetDialog.set(false)">
+            <button mat-icon-button (click)="closeForgotPasswordDialog()">
               <mat-icon>close</mat-icon>
             </button>
           </mat-card-header>
           <mat-card-content>
+            @if (forgotPasswordAlert()) {
+              <mat-card
+                class="alert alert-danger"
+                (click)="forgotPasswordAlert.set(null)"
+              >
+                <mat-card-content>{{ forgotPasswordAlert() }}</mat-card-content>
+              </mat-card>
+            }
             <form [formGroup]="forgotPasswordForm">
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Password Reset Email</mat-label>
@@ -90,7 +98,7 @@
             </form>
           </mat-card-content>
           <mat-card-actions>
-            <button mat-button (click)="passwordResetDialog.set(false)">Close</button>
+            <button mat-button (click)="closeForgotPasswordDialog()">Close</button>
             <button
               mat-raised-button
               color="primary"
@@ -110,12 +118,12 @@
   }
 
   @if (registerDialog()) {
-    <div class="modal" (click)="registerDialog.set(false)">
+    <div class="modal" (click)="closeRegisterDialog()">
       <div class="modal-dialog" (click)="$event.stopPropagation()">
         <mat-card class="modal-content">
           <mat-card-header>
             <mat-card-title>Register a User</mat-card-title>
-            <button mat-icon-button (click)="registerDialog.set(false)">
+            <button mat-icon-button (click)="closeRegisterDialog()">
               <mat-icon>close</mat-icon>
             </button>
           </mat-card-header>
@@ -157,7 +165,7 @@
             </form>
           </mat-card-content>
           <mat-card-actions>
-            <button mat-button (click)="registerDialog.set(false)">Close</button>
+            <button mat-button (click)="closeRegisterDialog()">Close</button>
             <button
               mat-raised-button
               color="primary"

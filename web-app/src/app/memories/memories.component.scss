@@ -216,6 +216,17 @@
   }
 }
 
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: spacing.$spacing-medium;
+  padding: spacing.$spacing-large;
+  text-align: center;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;
