@@ -22,6 +22,8 @@ class Memory extends Model
     {
         return [
             'time' => 'datetime',
+            // Multipart creates assign request strings; cast so API JSON matches GET /memories.
+            'location_id' => 'integer',
         ];
     }
 

@@ -205,7 +205,10 @@
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Location*</mat-label>
-              <mat-select formControlName="location_id">
+              <mat-select
+                formControlName="location_id"
+                [compareWith]="compareLocationIds"
+              >
                 @for (loc of locations(); track loc.id) {
                 <mat-option [value]="loc.id">
                   {{ loc.name }}, {{ loc.state }}
@@ -396,7 +399,10 @@
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Location*</mat-label>
-              <mat-select formControlName="location_id">
+              <mat-select
+                formControlName="location_id"
+                [compareWith]="compareLocationIds"
+              >
                 @for (loc of locations(); track loc.id) {
                 <mat-option [value]="loc.id">
                   {{ loc.name }}, {{ loc.state }}

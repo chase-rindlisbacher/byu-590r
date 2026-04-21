@@ -166,6 +166,20 @@ export class MemoriesComponent implements OnInit, OnDestroy {
   isMobile = isMobile;
   getFieldError = getFieldError;
 
+  /**
+   * MatSelect uses strict equality. Create-memory responses can send location_id as a
+   * string (multipart form) while option values from GET /locations are numbers.
+   */
+  compareLocationIds = (a: unknown, b: unknown): boolean => {
+    if (a == null && b == null) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return false;
+    }
+    return Number(a) === Number(b);
+  };
+
   constructor() {
     this.newMemoryForm = this.fb.group({
       journal_entry: ['', [Validators.required]],
@@ -329,10 +343,11 @@ export class MemoriesComponent implements OnInit, OnDestroy {
   openEditDialog(memory: Memory): void {
     this.pendingMediaRemovalIds.set([]);
     this.selectedEditMemory.set(memory);
+    const locationId = memory.location_id ?? memory.location?.id;
     this.editMemoryForm.patchValue({
       journal_entry: memory.journal_entry,
       time: apiDateTimeToDatetimeLocal(memory.time),
-      location_id: memory.location_id,
+      location_id: locationId != null ? Number(locationId) : null,
     });
     this.selectedEditCoverFile.set(null);
     this.selectedEditAdditionalFiles.set([]);

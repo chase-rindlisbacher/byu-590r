@@ -42,9 +42,34 @@
   color: colors.$colors-white !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding-top: env(safe-area-inset-top, 0px);
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
+  // Minimum horizontal inset so controls (esp. avatar) don’t hug the viewport; lighter than .app-main.
+  padding-left: max(
+    env(safe-area-inset-left, 0px),
+    #{spacing.$spacing-medium-large}
+  );
+  padding-right: max(
+    env(safe-area-inset-right, 0px),
+    #{spacing.$spacing-medium-large}
+  );
   box-sizing: border-box;
+
+  @media (max-width: bp.$handset-max) {
+    padding-left: max(
+      env(safe-area-inset-left, 0px),
+      #{spacing.$spacing-small + spacing.$spacing-extra-small}
+    );
+    padding-right: max(
+      env(safe-area-inset-right, 0px),
+      #{spacing.$spacing-small + spacing.$spacing-extra-small}
+    );
+  }
+
+  // Match mat-toolbar-single-row flex cross-axis (host is the single row when no mat-toolbar-row children).
+  align-items: center;
+
+  .avatar-button {
+    margin-left: spacing.$spacing-medium;
+  }
 }
 
 .app-bar-spacer {
@@ -54,6 +79,7 @@
 .nav-buttons {
   display: flex;
   flex-shrink: 0;
+  align-items: center;
   gap: spacing.$spacing-small;
 
   a {
@@ -82,6 +108,17 @@
 }
 
 .avatar-button {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+
+  // MDC icon buttons default asymmetric padding; uniform 4px centers the 40px image/icon in the 48px control.
+  &.mat-mdc-icon-button {
+    padding: spacing.$spacing-extra-small;
+  }
+
   .avatar-button__inner {
     position: relative;
     width: 40px;
@@ -106,6 +143,7 @@
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
+    display: block;
     opacity: 0;
     transition: opacity 0.2s ease-out;
 
@@ -119,6 +157,10 @@
     font-size: 40px;
     width: 40px;
     height: 40px;
+    line-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
