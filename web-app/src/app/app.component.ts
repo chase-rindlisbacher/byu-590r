@@ -92,6 +92,10 @@ export class AppComponent {
 
   private hasLoadedUser = signal(false);
 
+  /** True after the profile image fires load (or error). Reset when the avatar URL changes. */
+  avatarImageLoaded = signal(false);
+  avatarImageError = signal(false);
+
   constructor() {
     this.changeEmailForm = this.fb.group({
       email: [
@@ -135,6 +139,17 @@ export class AppComponent {
       }
       this.hasLoadedUser.set(true);
       this.getCurrentUser();
+    });
+
+    effect(() => {
+      const url = this.authStore.avatar();
+      if (!url) {
+        this.avatarImageError.set(false);
+        this.avatarImageLoaded.set(true);
+        return;
+      }
+      this.avatarImageError.set(false);
+      this.avatarImageLoaded.set(false);
     });
   }
 
@@ -321,5 +336,14 @@ export class AppComponent {
   openProfileDialog(): void {
     // Will be handled by template
     this.profileDialog.set(true);
+  }
+
+  onAvatarImageRendered(): void {
+    this.avatarImageLoaded.set(true);
+  }
+
+  onAvatarImageError(): void {
+    this.avatarImageError.set(true);
+    this.avatarImageLoaded.set(true);
   }
 }

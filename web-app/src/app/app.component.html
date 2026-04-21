@@ -17,11 +17,25 @@
       mat-icon-button
       [matMenuTriggerFor]="profileMenu"
       class="avatar-button"
+      type="button"
     >
-      @if (avatarURL) {
-      <img [src]="avatarURL" alt="Avatar" class="avatar-image" />
-      } @else {
+      @if (!avatarURL || avatarImageError()) {
       <mat-icon>account_circle</mat-icon>
+      } @else {
+      <span class="avatar-button__inner">
+        @if (!avatarImageLoaded()) {
+        <mat-spinner class="avatar-button__spinner" diameter="24" />
+        }
+        <img
+          [src]="avatarURL"
+          alt="Avatar"
+          class="avatar-image"
+          [class.avatar-image--ready]="avatarImageLoaded()"
+          decoding="async"
+          (load)="onAvatarImageRendered()"
+          (error)="onAvatarImageError()"
+        />
+      </span>
       }
     </button>
 
@@ -74,10 +88,23 @@
         <div class="modal-body">
           <p class="modal-subtitle">Enter your profile options here</p>
           <div class="avatar-preview">
-            @if (avatarURL) {
-            <img [src]="avatarURL" alt="Profile" class="profile-image" />
-            } @else {
+            @if (!avatarURL || avatarImageError()) {
             <mat-icon class="avatar-icon-large">account_circle</mat-icon>
+            } @else {
+            <div class="avatar-preview__inner">
+              @if (!avatarImageLoaded()) {
+              <mat-spinner class="avatar-preview__spinner" diameter="40" />
+              }
+              <img
+                [src]="avatarURL"
+                alt="Profile"
+                class="profile-image"
+                [class.profile-image--ready]="avatarImageLoaded()"
+                decoding="async"
+                (load)="onAvatarImageRendered()"
+                (error)="onAvatarImageError()"
+              />
+            </div>
             }
           </div>
           <div class="file-input-container">
