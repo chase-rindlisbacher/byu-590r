@@ -53,6 +53,7 @@ class MemoryGenerateImageTest extends TestCase
 
         $user = User::factory()->create();
         $location = Location::create([
+            'user_id' => $user->id,
             'name' => 'Test City',
             'street' => null,
             'city' => null,
@@ -109,6 +110,7 @@ class MemoryGenerateImageTest extends TestCase
 
         $user = User::factory()->create(['avatar' => 'images/avatar.jpg']);
         $location = Location::create([
+            'user_id' => $user->id,
             'name' => 'Test City',
             'street' => null,
             'city' => null,
@@ -163,6 +165,7 @@ class MemoryGenerateImageTest extends TestCase
 
         $user = User::factory()->create();
         $location = Location::create([
+            'user_id' => $user->id,
             'name' => 'Test City',
             'street' => null,
             'city' => null,
@@ -212,6 +215,7 @@ class MemoryGenerateImageTest extends TestCase
 
         $user = User::factory()->create();
         $location = Location::create([
+            'user_id' => $user->id,
             'name' => 'Test City',
             'street' => null,
             'city' => null,
@@ -244,6 +248,7 @@ class MemoryGenerateImageTest extends TestCase
         $owner = User::factory()->create();
         $other = User::factory()->create();
         $location = Location::create([
+            'user_id' => $owner->id,
             'name' => 'Test City',
             'street' => null,
             'city' => null,
@@ -270,6 +275,7 @@ class MemoryGenerateImageTest extends TestCase
 
         $user = User::factory()->create();
         $location = Location::create([
+            'user_id' => $user->id,
             'name' => 'Test City',
             'street' => null,
             'city' => null,
@@ -298,6 +304,7 @@ class MemoryGenerateImageTest extends TestCase
         UserPreference::where('user_id', $user->id)->update(['generate_images' => false]);
 
         $location = Location::create([
+            'user_id' => $user->id,
             'name' => 'Test City',
             'street' => null,
             'city' => null,

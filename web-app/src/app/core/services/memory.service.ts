@@ -14,6 +14,8 @@ export interface Media {
 
 export interface Location {
   id: number;
+  /** Scoped to the authenticated user on the API. */
+  user_id?: number;
   name: string;
   street: string | null;
   city: string | null;

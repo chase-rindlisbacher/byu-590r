@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class MemoryController extends BaseController
 {
@@ -66,10 +67,15 @@ class MemoryController extends BaseController
             return $broken;
         }
 
+        $user = Auth::user();
+
         $validator = Validator::make($request->all(), [
             'journal_entry' => 'required|string',
             'time' => 'required|date',
-            'location_id' => 'required|exists:locations,id',
+            'location_id' => [
+                'required',
+                Rule::exists('locations', 'id')->where('user_id', $user->id),
+            ],
             'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
             'files' => 'nullable|array',
             'files.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
@@ -78,8 +84,6 @@ class MemoryController extends BaseController
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors(), 422);
         }
-
-        $user = Auth::user();
         $memory = Memory::create([
             'journal_entry' => $request->journal_entry,
             'time' => $request->time,
@@ -227,10 +231,15 @@ class MemoryController extends BaseController
             return $broken;
         }
 
+        $user = Auth::user();
+
         $validator = Validator::make($request->all(), [
             'journal_entry' => 'required|string',
             'time' => 'required|date',
-            'location_id' => 'required|exists:locations,id',
+            'location_id' => [
+                'required',
+                Rule::exists('locations', 'id')->where('user_id', $user->id),
+            ],
             'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
         ]);
 
@@ -238,7 +247,6 @@ class MemoryController extends BaseController
             return $this->sendError('Validation Error.', $validator->errors(), 422);
         }
 
-        $user = Auth::user();
         $memory = Memory::with(['media'])->findOrFail($id);
 
         if ($memory->user_id !== $user->id) {

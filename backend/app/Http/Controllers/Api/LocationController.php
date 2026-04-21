@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Location;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class LocationController extends BaseController
@@ -13,7 +14,9 @@ class LocationController extends BaseController
      */
     public function index()
     {
-        $locations = Location::orderBy('name')->get();
+        $locations = Location::where('user_id', Auth::id())
+            ->orderBy('name')
+            ->get();
 
         return $this->sendResponse($locations, 'Locations');
     }
@@ -35,7 +38,10 @@ class LocationController extends BaseController
             return $this->sendError('Validation Error.', $validator->errors(), 422);
         }
 
-        $location = Location::create($validator->validated());
+        $location = Location::create(array_merge(
+            $validator->validated(),
+            ['user_id' => Auth::id()]
+        ));
 
         return $this->sendResponse($location, 'Location created successfully');
     }

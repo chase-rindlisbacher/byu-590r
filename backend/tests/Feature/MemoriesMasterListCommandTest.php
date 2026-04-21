@@ -20,6 +20,7 @@ class MemoriesMasterListCommandTest extends TestCase
 
         $user = User::factory()->create(['name' => 'Report User', 'email' => 'reportuser@example.com']);
         $location = Location::create([
+            'user_id' => $user->id,
             'name' => 'Campus',
             'street' => '1 Main',
             'city' => 'Provo',

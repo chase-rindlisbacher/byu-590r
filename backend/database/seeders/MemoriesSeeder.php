@@ -35,12 +35,16 @@ class MemoriesSeeder extends Seeder
         ];
         foreach ($locations as $loc) {
             Location::firstOrCreate(
-                ['name' => $loc['name'], 'state' => $loc['state']],
-                $loc
+                [
+                    'name' => $loc['name'],
+                    'state' => $loc['state'],
+                    'user_id' => $user->id,
+                ],
+                array_merge($loc, ['user_id' => $user->id])
             );
         }
 
-        $locationId = Location::first()?->id;
+        $locationId = Location::where('user_id', $user->id)->first()?->id;
 
         $memories = [
             [
